@@ -13,7 +13,7 @@ setup(
    long_description=long_description,
    long_description_content_type='text/markdown',  # This is important!
    author='Hakim K',
-   author_email='hakimkse+pypi@gmail.com',
+   author_email='5586611+hakimkhalafi@users.noreply.github.com',
    packages=find_packages(),
    install_requires=[]
 )
