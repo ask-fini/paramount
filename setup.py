@@ -11,9 +11,13 @@ setup(
    version='0.0.2',
    description='Automated accuracy measurements for LLMs',
    long_description=long_description,
-   long_description_content_type='text/markdown',  # This is important!
+   long_description_content_type='text/markdown',
    author='Hakim K',
    author_email='5586611+hakimkhalafi@users.noreply.github.com',
+   url='https://github.com/ask-fini/paramount',
+   project_urls={
+      'Source Code': 'https://github.com/ask-fini/paramount'
+   },
    packages=find_packages(),
    install_requires=[]
 )
