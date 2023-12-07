@@ -44,5 +44,6 @@ def record(func):
         serialized_result = serialize_response(result)
 
         print(f"Args and kwargs: {json.dumps(args_dict, indent=2)}, Result: {json.dumps(serialized_result, indent=2)}")
+        # todo: put as cols, record to df
         return result
     return wrapper

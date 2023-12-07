@@ -12,6 +12,9 @@ setup(
    description='Automated accuracy measurements for LLMs',
    long_description=long_description,
    long_description_content_type='text/markdown',
+   entry_points={
+       'console_scripts': ['paramount=paramount.cli:main'],
+   },
    author='Hakim K',
    author_email='5586611+hakimkhalafi@users.noreply.github.com',
    url='https://github.com/ask-fini/paramount',
@@ -19,5 +22,5 @@ setup(
       'Source Code': 'https://github.com/ask-fini/paramount'
    },
    packages=find_packages(),
-   install_requires=[]
+   install_requires=['streamlit']
 )
