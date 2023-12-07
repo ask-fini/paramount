@@ -1,5 +1,8 @@
-import inspect
+import pandas as pd
 import json
+import inspect
+import os
+from datetime import datetime
 
 
 def is_jsonable(x):
@@ -43,7 +46,27 @@ def record(func):
         result = func(*args, **kwargs)
         serialized_result = serialize_response(result)
 
+        # Create a DataFrame with a single row of the args_dict and result
+        result_data = {**args_dict}
+        for i, output in enumerate(serialized_result, start=1):
+            if isinstance(output, dict):
+                for key, value in output.items():
+                    result_data[f'output_{i}_{key}'] = value
+            else:
+                result_data[f'output_{i}'] = output
+        df = pd.DataFrame([result_data])
+
+        # Determine the filename based on the current date
+        filename = f"paramount_data_{datetime.now().strftime('%Y_%m_%d')}.csv"
+
+        # Check if the file exists, and if not, create it with header, else append without header
+        if not os.path.isfile(filename):
+            df.to_csv(filename, mode='a', index=False)
+        else:
+            df.to_csv(filename, mode='a', index=False, header=False)
+
         print(f"Args and kwargs: {json.dumps(args_dict, indent=2)}, Result: {json.dumps(serialized_result, indent=2)}")
-        # todo: put as cols, record to df
+
         return result
+
     return wrapper
