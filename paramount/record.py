@@ -54,7 +54,7 @@ def record(func):
         result_data = {
             'paramount_timestamp': timestamp_now,
             'paramount_ground_truth': False,
-            **args_dict}
+            **{f'input_{k}': v for k, v in args_dict.items()}}  # Adds "input_*" to column names, for differentiation
         for i, output in enumerate(serialized_result, start=1):
             if isinstance(output, dict):
                 for key, value in output.items():

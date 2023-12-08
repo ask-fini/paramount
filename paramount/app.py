@@ -3,6 +3,27 @@ import streamlit as st
 from glob import glob
 
 
+def color_columns(df: pd.DataFrame):
+    # Define the color for each prefix
+    colors = {
+        'paramount_': 'blue',
+        'input_': 'yellow',
+        'output_': 'green'
+    }
+
+    # Create a styler object from the dataframe
+    styler = df.style
+
+    # Apply the color to the columns based on the prefix
+    for col in df.columns:
+        for prefix, color in colors.items():
+            if col.startswith(prefix):
+                styler = styler.set_properties(**{'background-color': color}, subset=col)
+                break
+
+    return styler
+
+
 def run():
     st.title('Paramount')
     files = sorted(glob('paramount_data_*.csv'))
@@ -33,7 +54,8 @@ def run():
 
         df_merged = pd.concat([df[filtered_cols] for df in df_list])
 
-        st.data_editor(data=df_merged, use_container_width=True)
+        disabled_cols = set([col for col in df_merged.columns if col != "paramount_ground_truth"])
+        st.data_editor(data=color_columns(df_merged), use_container_width=True, disabled=disabled_cols)
     else:
         st.write("No data files found. Ensure you use @paramount.record decorator on any functions you want to record.")
 
