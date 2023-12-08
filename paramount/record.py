@@ -3,6 +3,7 @@ import json
 import inspect
 import os
 from datetime import datetime
+import pytz
 
 
 def is_jsonable(x):
@@ -46,8 +47,14 @@ def record(func):
         result = func(*args, **kwargs)
         serialized_result = serialize_response(result)
 
-        # Create a DataFrame with a single row of the args_dict and result
-        result_data = {**args_dict}
+        # Get current UTC timestamp
+        timestamp_now = datetime.now(pytz.timezone('UTC')).replace(microsecond=0).isoformat()
+
+        # Update result data dictionary with timestamp
+        result_data = {
+            'paramount_timestamp': timestamp_now,
+            'paramount_ground_truth': False,
+            **args_dict}
         for i, output in enumerate(serialized_result, start=1):
             if isinstance(output, dict):
                 for key, value in output.items():
@@ -55,17 +62,17 @@ def record(func):
             else:
                 result_data[f'output_{i}'] = output
         df = pd.DataFrame([result_data])
+        df['paramount_timestamp'] = pd.to_datetime(df['paramount_timestamp'])
+        df['paramount_ground_truth'] = df['paramount_ground_truth'].astype('bool')
 
         # Determine the filename based on the current date
-        filename = f"paramount_data_{datetime.now().strftime('%Y_%m_%d')}.csv"
+        filename = f"paramount_data_{datetime.utcnow().strftime('%Y_%m_%d')}.csv"
 
         # Check if the file exists, and if not, create it with header, else append without header
         if not os.path.isfile(filename):
             df.to_csv(filename, mode='a', index=False)
         else:
             df.to_csv(filename, mode='a', index=False, header=False)
-
-        print(f"Args and kwargs: {json.dumps(args_dict, indent=2)}, Result: {json.dumps(serialized_result, indent=2)}")
 
         return result
 
