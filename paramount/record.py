@@ -4,6 +4,7 @@ import inspect
 import os
 from datetime import datetime
 import pytz
+from time import time
 
 
 def is_jsonable(x):
@@ -44,16 +45,24 @@ def record(func):
         args_names = list(func_params.keys())
         args_dict = dict(zip(args_names[:len(args)], args))
         args_dict.update(kwargs)
+
+        start_time = time()
         result = func(*args, **kwargs)
+        end_time = time()
+
         serialized_result = serialize_response(result)
 
         # Get current UTC timestamp
         timestamp_now = datetime.now(pytz.timezone('UTC')).replace(microsecond=0).isoformat()
 
-        # Update result data dictionary with timestamp
+        # Update result data dictionary with invocation information
+        # TODO: In the future, could measure CPU/MEM usage per invocation. Skipped for now to not add too much overhead
+        # Skipped exception logging since functions may have internal handling which would be difficult to capture here
         result_data = {
             'paramount_ground_truth': False,
             'paramount_timestamp': timestamp_now,
+            'paramount_function_name': func.__name__,
+            'paramount_execution_time': end_time - start_time,
             **{f'input_{k}': v for k, v in args_dict.items()}}  # Adds "input_*" to column names, for differentiation
         for i, output in enumerate(serialized_result, start=1):
             if isinstance(output, dict):

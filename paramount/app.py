@@ -1,18 +1,18 @@
 import pandas as pd
 import streamlit as st
 from glob import glob
+st.set_page_config(layout="wide")
+
+colors = {
+    'paramount_': '#ACCBE1',  # Soft blue
+    'input_': '#C2E0C6',  # Pale green
+    'output_': '#FFF2CC',  # Light yellow
+}
 
 
 def color_columns(df: pd.DataFrame):
-    # Define the color for each prefix
-    colors = {
-        'paramount_': 'background-color: #ACCBE1',  # Soft blue
-        'input_': 'background-color: #C2E0C6',  # Pale green
-        'output_': 'background-color: #FFF2CC',  # Light yellow
-    }
-
     # Create a color map based on column prefixes
-    color_map = {col: color for prefix, color in colors.items() for col in df.columns if col.startswith(prefix)}
+    color_map = {col: f'background-color: {color}' for prefix, color in colors.items() for col in df.columns if col.startswith(prefix)}
 
     # Styling function to apply color_map
     styler = df.style.apply(lambda x: [color_map.get(x.name, '') for _ in x], axis=0)
@@ -37,41 +37,37 @@ def run():
 
         input_cols = [col for col in possible_cols if col.startswith("input_")]
         output_cols = [col for col in possible_cols if col.startswith("output_")]
-        identifier_cols = input_cols
+
+        paramount_suffix = ['timestamp', 'function_name', 'execution_time']
+        paramount_cols = ['paramount_' + suffix for suffix in paramount_suffix]
+        identifier_cols = paramount_cols + input_cols
 
         format_func = lambda col: "_".join(col.split("_")[1:]) if "_" in col else col
 
-        paramount_cols = ['paramount_ground_truth', 'paramount_timestamp']
+        col_mapping = {'paramount_': paramount_cols, 'input_': input_cols, 'output_': output_cols}
 
-        # Styling
-        input_selectors = [f'[aria-label^="{col.replace("input_", "")}"]' for col in input_cols]
-        output_selectors = [f'[aria-label^="{col.replace("output_", "")}"]' for col in output_cols]
-        input_css_selectors = ", ".join(input_selectors)
-        output_css_selectors = ", ".join(output_selectors)
-        st.markdown(f"""
-        <style>
-        /* Style for input tags */
-        {input_css_selectors} {{
-            background-color: #C2E0C6; /* Pale green */
-            color: black;
-        }}
+        # Generate CSS selectors and rules
+        css_rules = []
+        for prefix, cols in col_mapping.items():
+            color = colors.get(prefix)
+            selectors = [f'[aria-label^="{col.replace(prefix, "")}"]' for col in cols]
+            selector_str = ", ".join(selectors)
+            rule = f"{selector_str} {{ background-color: {color}; color: black; }}"
+            css_rules.append(rule)
 
-        /* Style for output tags */
-        {output_css_selectors} {{
-            background-color: #FFF2CC; /* Light yellow */
-            color: black;
-        }}
-        </style>
-        """, unsafe_allow_html=True)
+        # Combine all rules and pass to st.markdown
+        css_code = "\n".join(css_rules)
+        st.markdown(f"<style>{css_code}</style>", unsafe_allow_html=True)
 
-        selected_id_cols = st.multiselect('Identifiers', identifier_cols, format_func=format_func)
+        selected_id_cols = st.multiselect('Identifier and info columns', identifier_cols, format_func=format_func)
         selected_input_cols = st.multiselect('Input columns', input_cols, format_func=format_func)
         selected_output_cols = st.multiselect('Output columns', output_cols, format_func=format_func)
 
         if not selected_id_cols and not selected_input_cols and not selected_output_cols:
             filtered_cols = possible_cols
         else:
-            filtered_cols = paramount_cols + selected_id_cols + selected_input_cols + selected_output_cols
+            filtered_cols = ['paramount_ground_truth'] + selected_id_cols + selected_input_cols + selected_output_cols
+            filtered_cols = list(dict.fromkeys(filtered_cols))  # Avoids column name duplication but maintains order
 
         df_merged = pd.concat([df[filtered_cols] for df in df_list])
         df_merged = df_merged.reset_index(drop=True)
@@ -79,8 +75,19 @@ def run():
 
         column_config = {col: format_func(col) for col in df_merged.columns}
 
-        st.data_editor(data=color_columns(df_merged), column_config=column_config,
-                       use_container_width=True, disabled=disabled_cols)
+        edited_df = st.data_editor(data=color_columns(df_merged), column_config=column_config,
+                                   use_container_width=True, disabled=disabled_cols)
+
+        # TODO: In train mode, allow date filters (imagine massive data).
+        # Then once user is happy with ground truth, save edited_df to a special ground_truth table with button
+        # Challenge: How do the filters interplay with what's saved? Saved_df needs all params for replay
+        # Maybe a "saved_session" of ground truths is its own entry in a separate table, including filter settings
+        # Probably each row of ground truths need to be associated to a session ID
+        # TODO: In test mode, load in the ground truth table belonging to a session ID
+        # User selects "param to vary", and specifies a new value to test with. then clicks "Test" button
+        # Also accuracy measurement function choice will have to be made eg cosine distance
+        # Challenge: How to replay in the UI - How to invoke the recorded function? Will need env vars from prod enviro?
+
     else:
         st.write("No data files found. Ensure you use @paramount.record decorator on any functions you want to record.")
 
