@@ -87,6 +87,8 @@ def run():
         # User selects "param to vary", and specifies a new value to test with. then clicks "Test" button
         # Also accuracy measurement function choice will have to be made eg cosine distance
         # Challenge: How to replay in the UI - How to invoke the recorded function? Will need env vars from prod enviro?
+        # Best way to do it is probably co-run (on diff port) with whichever production docker the user is using
+        # Eg as an addition of "paramount *" on top of whichever pre-existing Docker run command (CMD exec)
 
     else:
         st.write("No data files found. Ensure you use @paramount.record decorator on any functions you want to record.")
