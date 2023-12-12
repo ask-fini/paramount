@@ -79,10 +79,10 @@ def run():
                                    use_container_width=True, disabled=disabled_cols)
 
         # TODO: In train mode, allow date filters (imagine massive data).
-        # Then once user is happy with ground truth, save edited_df to a special ground_truth table with button
+        # Then once user is happy with ground truth, save edited_df with button. updates original recording file
         # Challenge: How do the filters interplay with what's saved? Saved_df needs all params for replay
         # Maybe a "saved_session" of ground truths is its own entry in a separate table, including filter settings
-        # Probably each row of ground truths need to be associated to a session ID
+        # Probably each row of ground truths need to be associated to a session ID in that case
         # TODO: In test mode, load in the ground truth table belonging to a session ID
         # User selects "param to vary", and specifies a new value to test with. then clicks "Test" button
         # Also accuracy measurement function choice will have to be made eg cosine distance
