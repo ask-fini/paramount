@@ -1,6 +1,7 @@
 import pandas as pd
 import streamlit as st
 from glob import glob
+import uuid
 st.set_page_config(layout="wide")
 
 colors = {
@@ -38,7 +39,7 @@ def run():
         input_cols = [col for col in possible_cols if col.startswith("input_")]
         output_cols = [col for col in possible_cols if col.startswith("output_")]
 
-        paramount_suffix = ['timestamp', 'function_name', 'execution_time']
+        paramount_suffix = ['recording_id', 'timestamp', 'function_name', 'execution_time']
         paramount_cols = ['paramount_' + suffix for suffix in paramount_suffix]
         identifier_cols = paramount_cols + input_cols
 
@@ -69,14 +70,34 @@ def run():
             filtered_cols = ['paramount_ground_truth'] + selected_id_cols + selected_input_cols + selected_output_cols
             filtered_cols = list(dict.fromkeys(filtered_cols))  # Avoids column name duplication but maintains order
 
-        df_merged = pd.concat([df[filtered_cols] for df in df_list])
+        df_original = pd.concat(df_list)
+        df_merged = df_original[filtered_cols]
         df_merged = df_merged.reset_index(drop=True)
+        # Turn it into a checkbox
+        df_merged['paramount_ground_truth'] = df_merged['paramount_ground_truth'].apply(lambda x: False if pd.isna(x) else bool(str(x).strip()))
         disabled_cols = set([col for col in df_merged.columns if col != "paramount_ground_truth"])
 
         column_config = {col: format_func(col) for col in df_merged.columns}
 
         edited_df = st.data_editor(data=color_columns(df_merged), column_config=column_config,
-                                   use_container_width=True, disabled=disabled_cols)
+                                   use_container_width=True, disabled=disabled_cols, hide_index=True)
+
+        _, save_col, _ = st.columns(3)
+
+        # TODO: Prevent rerun when data_editor ground truth is clicked (it wipes previous state out..)
+        # TODO: Save the session data itself into a session.csv file
+        with save_col:
+            if st.button("Save session"):
+                for original_df, file in zip(df_list, files):
+                    session_id = str(uuid.uuid4())
+
+                    merged = pd.merge(edited_df[['paramount_ground_truth', 'paramount_recording_id']],
+                                      original_df.drop(columns='paramount_ground_truth', errors='ignore'),
+                                      on='paramount_recording_id', how='right')
+
+                    merged['paramount_ground_truth'] = merged['paramount_ground_truth'].apply(
+                        lambda x: session_id if x else '')
+                    merged.to_csv(file, index=False)
 
         # TODO: In train mode, allow date filters (imagine massive data).
         # Then once user is happy with ground truth, save edited_df with button. updates original recording file

@@ -5,6 +5,7 @@ import os
 from datetime import datetime
 import pytz
 from time import time
+import uuid
 
 
 def is_jsonable(x):
@@ -59,7 +60,8 @@ def record(func):
         # TODO: In the future, could measure CPU/MEM usage per invocation. Skipped for now to not add too much overhead
         # Skipped exception logging since functions may have internal handling which would be difficult to capture here
         result_data = {
-            'paramount_ground_truth': False,
+            'paramount_ground_truth': '',
+            'paramount_recording_id': str(uuid.uuid4()),
             'paramount_timestamp': timestamp_now,
             'paramount_function_name': func.__name__,
             'paramount_execution_time': end_time - start_time,
@@ -72,7 +74,6 @@ def record(func):
                 result_data[f'output_{i}'] = output
         df = pd.DataFrame([result_data])
         df['paramount_timestamp'] = pd.to_datetime(df['paramount_timestamp'])
-        df['paramount_ground_truth'] = df['paramount_ground_truth'].astype('bool')
 
         # Determine the filename based on the current date
         filename = f"paramount_data_{datetime.utcnow().strftime('%Y_%m_%d')}.csv"
