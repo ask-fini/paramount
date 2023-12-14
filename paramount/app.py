@@ -66,31 +66,45 @@ def run():
 
         if not selected_id_cols and not selected_input_cols and not selected_output_cols:
             filtered_cols = possible_cols
+            selection_made = False
         else:
-            filtered_cols = ['paramount_ground_truth'] + selected_id_cols + selected_input_cols + selected_output_cols
+            filtered_cols = ['paramount_ground_truth', 'paramount_recording_id'] + selected_id_cols + selected_input_cols + selected_output_cols
             filtered_cols = list(dict.fromkeys(filtered_cols))  # Avoids column name duplication but maintains order
+            selection_made = True
 
-        df_original = pd.concat(df_list)
-        df_merged = df_original[filtered_cols]
-        df_merged = df_merged.reset_index(drop=True)
+        # Now decide what DataFrame to use for the data_editor based on session state
+        if 'edited_df' in st.session_state:
+            df_merged = st.session_state['edited_df'][filtered_cols]
+        else:
+            df_merged = pd.concat(df_list)[filtered_cols].reset_index(drop=True)
+            # Turn session_id into a checkbox in the UI
+            df_merged['paramount_ground_truth'] = df_merged['paramount_ground_truth'].apply(
+                lambda x: False if pd.isna(x) else bool(str(x).strip()))
+
         # Turn it into a checkbox
-        df_merged['paramount_ground_truth'] = df_merged['paramount_ground_truth'].apply(lambda x: False if pd.isna(x) else bool(str(x).strip()))
+
         disabled_cols = set([col for col in df_merged.columns if col != "paramount_ground_truth"])
 
         column_config = {col: format_func(col) for col in df_merged.columns}
 
+        # paramount_recording_id needs to always be present in DF, for the pd.merge in session saving to work
+        if selection_made and "paramount_recording_id" not in selected_id_cols:
+            column_config['paramount_recording_id'] = None  # Hides the column
+
+        def on_change(edited_df):  # Needed to ensure UI updates are synchronized correctly across ground truth clicks
+            st.session_state['edited_df'] = edited_df
+
         edited_df = st.data_editor(data=color_columns(df_merged), column_config=column_config,
-                                   use_container_width=True, disabled=disabled_cols, hide_index=True)
+                                   use_container_width=True, disabled=disabled_cols, hide_index=True,
+                                   on_change=on_change, args=(df_merged,))
 
         _, save_col, _ = st.columns(3)
 
-        # TODO: Prevent rerun when data_editor ground truth is clicked (it wipes previous state out..)
         # TODO: Save the session data itself into a session.csv file
         with save_col:
             if st.button("Save session"):
+                session_id = str(uuid.uuid4())
                 for original_df, file in zip(df_list, files):
-                    session_id = str(uuid.uuid4())
-
                     merged = pd.merge(edited_df[['paramount_ground_truth', 'paramount_recording_id']],
                                       original_df.drop(columns='paramount_ground_truth', errors='ignore'),
                                       on='paramount_recording_id', how='right')
@@ -98,6 +112,7 @@ def run():
                     merged['paramount_ground_truth'] = merged['paramount_ground_truth'].apply(
                         lambda x: session_id if x else '')
                     merged.to_csv(file, index=False)
+                st.session_state['edited_df'] = edited_df
 
         # TODO: In train mode, allow date filters (imagine massive data).
         # Then once user is happy with ground truth, save edited_df with button. updates original recording file
