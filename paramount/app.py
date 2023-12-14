@@ -2,6 +2,8 @@ import pandas as pd
 import streamlit as st
 from glob import glob
 import uuid
+import pytz
+from datetime import datetime
 st.set_page_config(layout="wide")
 
 colors = {
@@ -98,12 +100,22 @@ def run():
                                    use_container_width=True, disabled=disabled_cols, hide_index=True,
                                    on_change=on_change, args=(df_merged,))
 
+        st.markdown('''<style> .stButton>button { height: 3em; width: 10em; } </style>''', unsafe_allow_html=True)
         _, save_col, _ = st.columns(3)
 
-        # TODO: Save the session data itself into a session.csv file
-        with save_col:
+        with (save_col):
             if st.button("Save session"):
                 session_id = str(uuid.uuid4())
+                session_df = {
+                    'session_id': session_id,
+                    'session_time': datetime.now(pytz.timezone('UTC')).replace(microsecond=0).isoformat(),
+                    'session_id_cols': selected_id_cols,
+                    'session_input_cols': selected_input_cols,
+                    'session_output_cols': selected_output_cols,
+                    'session_all_filtered_cols': filtered_cols,
+                    'session_all_possible_cols': possible_cols
+                }
+
                 for original_df, file in zip(df_list, files):
                     merged = pd.merge(edited_df[['paramount_ground_truth', 'paramount_recording_id']],
                                       original_df.drop(columns='paramount_ground_truth', errors='ignore'),
@@ -112,14 +124,14 @@ def run():
                     merged['paramount_ground_truth'] = merged['paramount_ground_truth'].apply(
                         lambda x: session_id if x else '')
                     merged.to_csv(file, index=False)
+
+                session_csv = 'paramount_ground_truth_sessions.csv'
+                pd.DataFrame([session_df]).to_csv(session_csv, mode='a',
+                                                  header=not pd.io.common.file_exists(session_csv), index=False)
                 st.session_state['edited_df'] = edited_df
 
-        # TODO: In train mode, allow date filters (imagine massive data).
-        # Then once user is happy with ground truth, save edited_df with button. updates original recording file
-        # Challenge: How do the filters interplay with what's saved? Saved_df needs all params for replay
-        # Maybe a "saved_session" of ground truths is its own entry in a separate table, including filter settings
-        # Probably each row of ground truths need to be associated to a session ID in that case
-        # TODO: In test mode, load in the ground truth table belonging to a session ID
+        # TODO: For train mode, allow date/session/botid filters (imagine massive data).
+        # TODO: Test mode: load in the ground truth table belonging to a session ID
         # User selects "param to vary", and specifies a new value to test with. then clicks "Test" button
         # Also accuracy measurement function choice will have to be made eg cosine distance
         # Challenge: How to replay in the UI - How to invoke the recorded function? Will need env vars from prod enviro?

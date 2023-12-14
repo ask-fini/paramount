@@ -22,5 +22,5 @@ setup(
       'Source Code': 'https://github.com/ask-fini/paramount'
    },
    packages=find_packages(),
-   install_requires=['streamlit', 'pandas']
+   install_requires=['streamlit', 'pandas', 'pytz']
 )
