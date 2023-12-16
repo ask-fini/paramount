@@ -70,65 +70,64 @@ def run():
             filtered_cols = possible_cols
             selection_made = False
         else:
-            filtered_cols = ['paramount_ground_truth', 'paramount_recording_id'] + selected_id_cols + selected_input_cols + selected_output_cols
+            filtered_cols = ['paramount_ground_truth'] + selected_id_cols + selected_input_cols + selected_output_cols
             filtered_cols = list(dict.fromkeys(filtered_cols))  # Avoids column name duplication but maintains order
             selection_made = True
 
         # Now decide what DataFrame to use for the data_editor based on session state
-        if 'edited_df' in st.session_state:
-            df_merged = st.session_state['edited_df'][filtered_cols]
+        if 'full_df' in st.session_state:
+            full_df = st.session_state['full_df']
         else:
-            df_merged = pd.concat(df_list)[filtered_cols].reset_index(drop=True)
+            full_df = pd.concat(df_list).reset_index(drop=True)
             # Turn session_id into a checkbox in the UI
-            df_merged['paramount_ground_truth'] = df_merged['paramount_ground_truth'].apply(
+            full_df['paramount_ground_truth'] = full_df['paramount_ground_truth'].apply(
                 lambda x: False if pd.isna(x) else bool(str(x).strip()))
 
         # Turn it into a checkbox
 
-        disabled_cols = set([col for col in df_merged.columns if col != "paramount_ground_truth"])
+        disabled_cols = set([col for col in full_df.columns if col not in ["paramount_ground_truth"] + selected_output_cols])
 
-        column_config = {col: format_func(col) for col in df_merged.columns}
+        column_config = {col: format_func(col) for col in full_df.columns}
 
-        # paramount_recording_id needs to always be present in DF, for the pd.merge in session saving to work
-        if selection_made and "paramount_recording_id" not in selected_id_cols:
-            column_config['paramount_recording_id'] = None  # Hides the column
+        if selection_made:  # Updates the config for unselected cols to hide them
+            column_config.update({column: None for column in possible_cols if column not in filtered_cols})
 
-        def on_change(edited_df):  # Needed to ensure UI updates are synchronized correctly across ground truth clicks
-            st.session_state['edited_df'] = edited_df
+        def on_change(full_df):  # Needed to ensure UI updates are synchronized correctly across ground truth clicks
+            st.session_state['full_df'] = full_df
 
-        edited_df = st.data_editor(data=color_columns(df_merged), column_config=column_config,
-                                   use_container_width=True, disabled=disabled_cols, hide_index=True,
-                                   on_change=on_change, args=(df_merged,))
+        full_df = st.data_editor(data=color_columns(full_df), column_config=column_config,
+                                 use_container_width=True, disabled=disabled_cols, hide_index=True,
+                                 on_change=on_change, args=(full_df,))
 
-        st.markdown('''<style> .stButton>button { height: 3em; width: 10em; } </style>''', unsafe_allow_html=True)
-        _, save_col, _ = st.columns(3)
+        st.markdown("<style> .stButton>button { height: 3em; width: 20em; } </style>", unsafe_allow_html=True)
+        st.markdown("<style>div.row-widget.stButton { display: flex; justify-content: center; }</style>",
+                    unsafe_allow_html=True)
 
-        with (save_col):
-            if st.button("Save session"):
-                session_id = str(uuid.uuid4())
-                session_df = {
-                    'session_id': session_id,
-                    'session_time': datetime.now(pytz.timezone('UTC')).replace(microsecond=0).isoformat(),
-                    'session_id_cols': selected_id_cols,
-                    'session_input_cols': selected_input_cols,
-                    'session_output_cols': selected_output_cols,
-                    'session_all_filtered_cols': filtered_cols,
-                    'session_all_possible_cols': possible_cols
-                }
+        if st.button("Save session"):
+            session_id = str(uuid.uuid4())
+            session_df = {
+                'session_id': session_id,
+                'session_time': datetime.now(pytz.timezone('UTC')).replace(microsecond=0).isoformat(),
+                'session_id_cols': selected_id_cols,
+                'session_input_cols': selected_input_cols,
+                'session_output_cols': selected_output_cols,
+                'session_all_filtered_cols': filtered_cols,
+                'session_all_possible_cols': possible_cols
+            }
 
-                for original_df, file in zip(df_list, files):
-                    merged = pd.merge(edited_df[['paramount_ground_truth', 'paramount_recording_id']],
-                                      original_df.drop(columns='paramount_ground_truth', errors='ignore'),
-                                      on='paramount_recording_id', how='right')
+            for original_df, file in zip(df_list, files):
+                merged = pd.merge(full_df[['paramount_ground_truth', 'paramount_recording_id']+selected_output_cols],
+                                  original_df.drop(columns=['paramount_ground_truth']+selected_output_cols,
+                                                   errors='ignore'), on='paramount_recording_id', how='right')
 
-                    merged['paramount_ground_truth'] = merged['paramount_ground_truth'].apply(
-                        lambda x: session_id if x else '')
-                    merged.to_csv(file, index=False)
+                merged['paramount_ground_truth'] = merged['paramount_ground_truth'].apply(
+                    lambda x: session_id if x else '')
+                merged.to_csv(file, index=False)
 
-                session_csv = 'paramount_ground_truth_sessions.csv'
-                pd.DataFrame([session_df]).to_csv(session_csv, mode='a',
-                                                  header=not pd.io.common.file_exists(session_csv), index=False)
-                st.session_state['edited_df'] = edited_df
+            session_csv = 'paramount_ground_truth_sessions.csv'
+            pd.DataFrame([session_df]).to_csv(session_csv, mode='a',
+                                              header=not pd.io.common.file_exists(session_csv), index=False)
+            st.session_state['full_df'] = full_df
 
         # TODO: For train mode, allow date/session/botid filters (imagine massive data).
         # TODO: Test mode: load in the ground truth table belonging to a session ID
