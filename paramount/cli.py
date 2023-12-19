@@ -7,7 +7,7 @@ def main():
     if len(sys.argv) == 1:
         # User ran only "paramount"
         directory = os.path.dirname(__file__)
-        app_path = os.path.join(directory, 'app.py')
+        app_path = os.path.join(directory, 'Train.py')
         sys.argv = ["streamlit", "run", app_path] + sys.argv[1:]
         stcli.main()
     else:

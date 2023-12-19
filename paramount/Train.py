@@ -4,6 +4,7 @@ from glob import glob
 import uuid
 import pytz
 from datetime import datetime
+from paramount.library_functions import hide_buttons
 st.set_page_config(layout="wide")
 
 colors = {
@@ -25,6 +26,7 @@ def color_columns(df: pd.DataFrame):
 
 
 def run():
+    hide_buttons()
     st.title('Paramount')
     files = sorted(glob('paramount_data_*.csv'))
 
@@ -130,6 +132,7 @@ def run():
             st.session_state['full_df'] = full_df
 
         # TODO: For train mode, allow date/session/botid filters (imagine massive data).
+        # TODO: For train, try with other functions such that record.py is more robust.
         # TODO: Test mode: load in the ground truth table belonging to a session ID
         # User selects "param to vary", and specifies a new value to test with. then clicks "Test" button
         # Also accuracy measurement function choice will have to be made eg cosine distance
