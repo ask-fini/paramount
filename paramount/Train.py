@@ -27,7 +27,7 @@ def color_columns(df: pd.DataFrame):
 
 def run():
     hide_buttons()
-    st.title('Paramount')
+    st.title('Record ground truth data')
     files = sorted(glob('paramount_data_*.csv'))
 
     df_list = []
@@ -118,9 +118,12 @@ def run():
             }
 
             for original_df, file in zip(df_list, files):
+                # Including selected_output_cols in the merge, in order to include any UI edits done for the outputs
                 merged = pd.merge(full_df[['paramount_ground_truth', 'paramount_recording_id']+selected_output_cols],
                                   original_df.drop(columns=['paramount_ground_truth']+selected_output_cols,
                                                    errors='ignore'), on='paramount_recording_id', how='right')
+
+                merged = merged.reindex(columns=original_df.columns)  # To not mess up the order of output cols
 
                 merged['paramount_ground_truth'] = merged['paramount_ground_truth'].apply(
                     lambda x: session_id if x else '')
