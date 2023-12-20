@@ -22,5 +22,8 @@ setup(
       'Source Code': 'https://github.com/ask-fini/paramount'
    },
    packages=find_packages(),
+   package_data={
+        'paramount': ['thousand_random_words.txt'],
+    },
    install_requires=['streamlit', 'pandas', 'pytz']
 )

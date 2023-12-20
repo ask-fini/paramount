@@ -4,7 +4,7 @@ from glob import glob
 import uuid
 import pytz
 from datetime import datetime
-from paramount.library_functions import hide_buttons
+from paramount.library_functions import hide_buttons, random_suggested_name
 st.set_page_config(layout="wide")
 
 colors = {
@@ -105,10 +105,16 @@ def run():
         st.markdown("<style>div.row-widget.stButton { display: flex; justify-content: center; }</style>",
                     unsafe_allow_html=True)
 
+        if 'random_suggested_name' not in st.session_state:
+            st.session_state['random_suggested_name'] = random_suggested_name()
+
+        session_name = st.text_input("Session name (optional)", value=st.session_state['random_suggested_name'])
+
         if st.button("Save session"):
             session_id = str(uuid.uuid4())
             session_df = {
                 'session_id': session_id,
+                'session_name': session_name,
                 'session_time': datetime.now(pytz.timezone('UTC')).replace(microsecond=0).isoformat(),
                 'session_id_cols': selected_id_cols,
                 'session_input_cols': selected_input_cols,
@@ -133,15 +139,11 @@ def run():
             pd.DataFrame([session_df]).to_csv(session_csv, mode='a',
                                               header=not pd.io.common.file_exists(session_csv), index=False)
             st.session_state['full_df'] = full_df
+            st.session_state['random_suggested_name'] = random_suggested_name()
+            st.experimental_rerun()
 
         # TODO: For train mode, allow date/session/botid filters (imagine massive data).
         # TODO: For train, try with other functions such that record.py is more robust.
-        # TODO: Test mode: load in the ground truth table belonging to a session ID
-        # User selects "param to vary", and specifies a new value to test with. then clicks "Test" button
-        # Also accuracy measurement function choice will have to be made eg cosine distance
-        # Challenge: How to replay in the UI - How to invoke the recorded function? Will need env vars from prod enviro?
-        # Best way to do it is probably co-run (on diff port) with whichever production docker the user is using
-        # Eg as an addition of "paramount *" on top of whichever pre-existing Docker run command (CMD exec)
 
     else:
         st.write("No data files found. Ensure you use @paramount.record decorator on any functions you want to record.")
