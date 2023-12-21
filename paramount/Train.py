@@ -1,6 +1,6 @@
 import pandas as pd
 import streamlit as st
-from glob import glob
+import os
 import uuid
 import pytz
 from datetime import datetime
@@ -28,17 +28,11 @@ def color_columns(df: pd.DataFrame):
 def run():
     hide_buttons()
     st.title('Record ground truth data')
-    files = sorted(glob('paramount_data_*.csv'))
 
-    df_list = []
-
-    possible_cols = []
-
-    if len(files) > 0:
-        for idx, file in enumerate(files):
-            temp_df = pd.read_csv(file)
-            df_list.append(temp_df)
-            possible_cols += [col for col in temp_df.columns if col not in possible_cols]
+    filename = 'paramount_data.csv'
+    if os.path.isfile(filename):
+        read_df = pd.read_csv(filename)
+        possible_cols = read_df.columns
 
         input_cols = [col for col in possible_cols if col.startswith("input_")]
         output_cols = [col for col in possible_cols if col.startswith("output_")]
@@ -80,7 +74,7 @@ def run():
         if 'full_df' in st.session_state:
             full_df = st.session_state['full_df']
         else:
-            full_df = pd.concat(df_list).reset_index(drop=True)
+            full_df = read_df.reset_index(drop=True)
             # Turn session_id into a checkbox in the UI
             full_df['paramount_ground_truth'] = full_df['paramount_ground_truth'].apply(
                 lambda x: False if pd.isna(x) else bool(str(x).strip()))
@@ -123,30 +117,29 @@ def run():
                 'session_all_possible_cols': possible_cols
             }
 
-            for original_df, file in zip(df_list, files):
-                # Including selected_output_cols in the merge, in order to include any UI edits done for the outputs
-                merged = pd.merge(full_df[['paramount_ground_truth', 'paramount_recording_id']+selected_output_cols],
-                                  original_df.drop(columns=['paramount_ground_truth']+selected_output_cols,
-                                                   errors='ignore'), on='paramount_recording_id', how='right')
+            # Including selected_output_cols in the merge, in order to include any UI edits done for the outputs
+            merged = pd.merge(full_df[['paramount_ground_truth', 'paramount_recording_id']+selected_output_cols],
+                              read_df.drop(columns=['paramount_ground_truth']+selected_output_cols,
+                                               errors='ignore'), on='paramount_recording_id', how='right')
 
-                merged = merged.reindex(columns=original_df.columns)  # To not mess up the order of output cols
+            merged = merged.reindex(columns=read_df.columns)  # To not mess up the order of output cols
 
-                merged['paramount_ground_truth'] = merged['paramount_ground_truth'].apply(
-                    lambda x: session_id if x else '')
-                merged.to_csv(file, index=False)
+            merged['paramount_ground_truth'] = merged['paramount_ground_truth'].apply(
+                lambda x: session_id if x else '')
+            merged.to_csv(filename, index=False)
 
             session_csv = 'paramount_ground_truth_sessions.csv'
             pd.DataFrame([session_df]).to_csv(session_csv, mode='a',
                                               header=not pd.io.common.file_exists(session_csv), index=False)
             st.session_state['full_df'] = full_df
             st.session_state['random_suggested_name'] = random_suggested_name()
-            st.experimental_rerun()
+            st.rerun()
 
         # TODO: For train mode, allow date/session/botid filters (imagine massive data).
         # TODO: For train, try with other functions such that record.py is more robust.
 
     else:
-        st.write("No data files found. Ensure you use @paramount.record decorator on any functions you want to record.")
+        st.write("No data found. Ensure you use @paramount.record decorator on any functions you want to record.")
 
 
 if __name__ == '__main__':

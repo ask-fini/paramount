@@ -76,7 +76,7 @@ def record(func):
         df['paramount_timestamp'] = pd.to_datetime(df['paramount_timestamp'])
 
         # Determine the filename based on the current date
-        filename = f"paramount_data_{datetime.utcnow().strftime('%Y_%m_%d')}.csv"
+        filename = "paramount_data.csv"
 
         # Check if the file exists, and if not, create it with header, else append without header
         if not os.path.isfile(filename):
