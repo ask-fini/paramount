@@ -68,3 +68,5 @@ target/
 .env
 .venv/
 .env/
+
+paramount_*.csv

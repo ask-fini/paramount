@@ -1,9 +1,15 @@
 import pandas as pd
 import streamlit as st
-from paramount.library_functions import hide_buttons
+from paramount.library_functions import (
+    hide_buttons,
+    color_columns,
+    get_colors,
+    format_func,
+)
 import os
+import ast
 
-hide_buttons()
+# hide_buttons()
 st.title("Test tweaks and accuracy")
 
 filename = 'paramount_ground_truth_sessions.csv'
@@ -11,27 +17,46 @@ if os.path.isfile(filename):
 
     sessions = pd.read_csv('paramount_ground_truth_sessions.csv')
     sessions['session_time'] = pd.to_datetime(sessions['session_time'])
-    available_sessions = sessions['session_name'] + sessions['session_time'].dt.strftime(' - %Y-%m-%d %H:%M:%S')
+    timestr = sessions.sort_values('session_time')['session_time'].dt.strftime('%Y-%m-%d %H:%M:%S')
+    namestr = sessions.sort_values('session_time')['session_name']
+    available_sessions = timestr + ': ' + namestr
 
-    # Create a mapping from the available_sessions to session_id
-    session_to_id = dict(zip(available_sessions, sessions['session_id']))
+    session_to_index = pd.Series(sessions.sort_values('session_time').index, index=available_sessions)
 
-    # Select a session using the selectbox
+    # User selects a session from Streamlit's selectbox
     selected_session = st.selectbox("Select a ground truth session", available_sessions)
 
     if selected_session:
-        # Retrieve the session_id using the selected session name and time
-        session_id = session_to_id[selected_session]
+        # Retrieve the index of the selected session
+        session_index = session_to_index[selected_session]
+        # Retrieve the full row corresponding to the selected session
+        session = sessions.loc[session_index]
 
-        # Now load the specific DataFrame for the selected session_id from the merged CSV file
         filename = 'paramount_data.csv'
         full_df = pd.read_csv(filename)
 
-        # Filter the full_df by the selected session_id
-        session_df = full_df[full_df['paramount_ground_truth'] == session_id]
+        session_df = full_df[full_df['paramount_ground_truth'] == session['session_id']]
 
-        # Display the DataFrame for the selected session
-        st.dataframe(session_df)
+        editable_columns = []
+
+        filtered_cols = session['session_all_filtered_cols']
+
+        colnames_cols = ['session_id_cols', 'session_input_cols', 'session_output_cols', 'session_all_filtered_cols',
+                         'session_all_possible_cols']
+
+        # Convert the column lists from strings back to their actual list format
+        for df_column_list in colnames_cols:
+            session[df_column_list] = ast.literal_eval(session[df_column_list])
+
+        disabled_cols = set([col for col in full_df.columns if col not in editable_columns])
+        column_config = {col: format_func(col) for col in session_df.columns}
+        to_update = {column: None for column in session['session_all_possible_cols'] if column not in filtered_cols}
+        to_update['paramount_ground_truth'] = None
+
+        column_config.update(to_update)
+
+        df = st.data_editor(data=color_columns(session_df), column_config=column_config, use_container_width=True,
+                            disabled=disabled_cols, hide_index=True)
 
     # TODO: Test mode: load in the ground truth table belonging to a session ID
     # User selects "param to vary", and specifies a new value to test with. then clicks "Test" button

@@ -4,25 +4,14 @@ import os
 import uuid
 import pytz
 from datetime import datetime
-from paramount.library_functions import hide_buttons, random_suggested_name
+from paramount.library_functions import (
+    hide_buttons,
+    random_suggested_name,
+    color_columns,
+    get_colors,
+    format_func,
+)
 st.set_page_config(layout="wide")
-
-colors = {
-    'paramount_': '#ACCBE1',  # Soft blue
-    'input_': '#C2E0C6',  # Pale green
-    'output_': '#FFF2CC',  # Light yellow
-}
-
-
-def color_columns(df: pd.DataFrame):
-    # Create a color map based on column prefixes
-    color_map = {col: f'background-color: {color}' for prefix, color in colors.items() for col in df.columns if col.startswith(prefix)}
-
-    # Styling function to apply color_map
-    styler = df.style.apply(lambda x: [color_map.get(x.name, '') for _ in x], axis=0)
-
-    # Return the styler to display the DataFrame with the colored columns
-    return styler
 
 
 def run():
@@ -41,14 +30,12 @@ def run():
         paramount_cols = ['paramount_' + suffix for suffix in paramount_suffix]
         identifier_cols = paramount_cols + input_cols
 
-        format_func = lambda col: "_".join(col.split("_")[1:]) if "_" in col else col
-
         col_mapping = {'paramount_': paramount_cols, 'input_': input_cols, 'output_': output_cols}
 
         # Generate CSS selectors and rules
         css_rules = []
         for prefix, cols in col_mapping.items():
-            color = colors.get(prefix)
+            color = get_colors().get(prefix)
             selectors = [f'[aria-label^="{col.replace(prefix, "")}"]' for col in cols]
             selector_str = ", ".join(selectors)
             rule = f"{selector_str} {{ background-color: {color}; color: black; }}"
@@ -79,8 +66,6 @@ def run():
             full_df['paramount_ground_truth'] = full_df['paramount_ground_truth'].apply(
                 lambda x: False if pd.isna(x) else bool(str(x).strip()))
 
-        # Turn it into a checkbox
-
         disabled_cols = set([col for col in full_df.columns if col not in ["paramount_ground_truth"] + selected_output_cols])
 
         column_config = {col: format_func(col) for col in full_df.columns}
@@ -110,17 +95,17 @@ def run():
                 'session_id': session_id,
                 'session_name': session_name,
                 'session_time': datetime.now(pytz.timezone('UTC')).replace(microsecond=0).isoformat(),
-                'session_id_cols': selected_id_cols,
-                'session_input_cols': selected_input_cols,
-                'session_output_cols': selected_output_cols,
-                'session_all_filtered_cols': filtered_cols,
-                'session_all_possible_cols': possible_cols
+                'session_id_cols': list(selected_id_cols),
+                'session_input_cols': list(selected_input_cols),
+                'session_output_cols': list(selected_output_cols),
+                'session_all_filtered_cols': list(filtered_cols),
+                'session_all_possible_cols': list(possible_cols)
             }
 
             # Including selected_output_cols in the merge, in order to include any UI edits done for the outputs
             merged = pd.merge(full_df[['paramount_ground_truth', 'paramount_recording_id']+selected_output_cols],
                               read_df.drop(columns=['paramount_ground_truth']+selected_output_cols,
-                                               errors='ignore'), on='paramount_recording_id', how='right')
+                                           errors='ignore'), on='paramount_recording_id', how='right')
 
             merged = merged.reindex(columns=read_df.columns)  # To not mess up the order of output cols
 
