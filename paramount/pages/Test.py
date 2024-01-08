@@ -1,9 +1,7 @@
 import pandas as pd
 import streamlit as st
 from paramount.library_functions import (
-    hide_buttons,
     color_columns,
-    get_colors,
     format_func,
 )
 import os
@@ -31,6 +29,7 @@ if os.path.isfile(filename):
         session_index = session_to_index[selected_session]
         # Retrieve the full row corresponding to the selected session
         session = sessions.loc[session_index]
+        session = session.copy()  # to avoid SettingWithCopyWarning in our invocation of ast.literal_eval
 
         filename = 'paramount_data.csv'
         full_df = pd.read_csv(filename)
@@ -58,9 +57,13 @@ if os.path.isfile(filename):
         df = st.data_editor(data=color_columns(session_df), column_config=column_config, use_container_width=True,
                             disabled=disabled_cols, hide_index=True)
 
+        selected_session = st.selectbox("Select an input param to test against", session['session_input_cols'],
+                                        format_func=format_func)
+
     # TODO: Test mode: load in the ground truth table belonging to a session ID
     # User selects "param to vary", and specifies a new value to test with. then clicks "Test" button
     # Also accuracy measurement function choice will have to be made eg cosine distance
+
     # Challenge: How to replay in the UI - How to invoke the recorded function? Will need env vars from prod enviro?
     # Best way to do it is probably co-run (on diff port) with whichever production docker the user is using
     # Eg as an addition of "paramount *" on top of whichever pre-existing Docker run command (CMD exec)
