@@ -11,6 +11,13 @@ def get_words():
     return word_list
 
 
+def large_centered_button(text):
+    st.markdown("<style> .stButton>button { height: 3em; width: 20em; } </style>", unsafe_allow_html=True)
+    st.markdown("<style>div.row-widget.stButton { display: flex; justify-content: center; }</style>",
+                unsafe_allow_html=True)
+    return st.button(text)
+
+
 def random_suggested_name():
     return ' '.join([item[0].upper() + item[1:].lower() for item in random.sample(get_words(), 2)])
 

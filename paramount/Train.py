@@ -10,6 +10,7 @@ from paramount.library_functions import (
     color_columns,
     get_colors,
     format_func,
+    large_centered_button,
 )
 st.set_page_config(layout="wide")
 
@@ -80,16 +81,12 @@ def run():
                                  use_container_width=True, disabled=disabled_cols, hide_index=True,
                                  on_change=on_change, args=(full_df,))
 
-        st.markdown("<style> .stButton>button { height: 3em; width: 20em; } </style>", unsafe_allow_html=True)
-        st.markdown("<style>div.row-widget.stButton { display: flex; justify-content: center; }</style>",
-                    unsafe_allow_html=True)
-
         if 'random_suggested_name' not in st.session_state:
             st.session_state['random_suggested_name'] = random_suggested_name()
 
         session_name = st.text_input("Session name (optional)", value=st.session_state['random_suggested_name'])
 
-        if st.button("Save session"):
+        if large_centered_button("Save session"):
             session_id = str(uuid.uuid4())
             session_df = {
                 'session_id': session_id,

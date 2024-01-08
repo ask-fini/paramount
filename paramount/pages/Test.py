@@ -3,6 +3,7 @@ import streamlit as st
 from paramount.library_functions import (
     color_columns,
     format_func,
+    large_centered_button,
 )
 import os
 import ast
@@ -57,12 +58,17 @@ if os.path.isfile(filename):
         df = st.data_editor(data=color_columns(session_df), column_config=column_config, use_container_width=True,
                             disabled=disabled_cols, hide_index=True)
 
-        selected_session = st.selectbox("Select an input param to test against", session['session_input_cols'],
+        selected_input_var = st.selectbox("Select an input param to vary", session['session_input_cols'],
                                         format_func=format_func)
 
-    # TODO: Test mode: load in the ground truth table belonging to a session ID
-    # User selects "param to vary", and specifies a new value to test with. then clicks "Test" button
-    # Also accuracy measurement function choice will have to be made eg cosine distance
+        if selected_input_var:
+            most_common_input_content = session_df[selected_input_var].mode()
+            first_mode_value = most_common_input_content.iloc[0] if not most_common_input_content.empty else None
+            st.text_area("Most common value", first_mode_value)
+            if large_centered_button("Test against ground truth"):
+                st.write("Lol")
+
+    # User selects input param, edits it, then clicks test - upon which a cosine distance is measured to ground truth
 
     # Challenge: How to replay in the UI - How to invoke the recorded function? Will need env vars from prod enviro?
     # Best way to do it is probably co-run (on diff port) with whichever production docker the user is using
