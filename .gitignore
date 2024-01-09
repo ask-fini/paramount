@@ -58,7 +58,7 @@ target/
 .DS_Store
 
 # PyCharm IDE directory
-.idea/%5
+.idea/
 
 # VS Code directory
 .vscode
