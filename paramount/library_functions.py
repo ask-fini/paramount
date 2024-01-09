@@ -32,7 +32,7 @@ def get_colors():
 
 
 def format_func(col):
-    return "_".join(col.split("_")[1:]) if "_" in col else col
+    return col.split("__")[1:] if "__" in col else col
 
 
 def color_columns(df: pd.DataFrame):

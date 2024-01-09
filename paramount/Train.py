@@ -85,40 +85,40 @@ def run():
             st.session_state['random_suggested_name'] = random_suggested_name()
 
         session_name = st.text_input("Session name (optional)", value=st.session_state['random_suggested_name'])
+        if selection_made:
+            if large_centered_button("Save session"):
+                session_id = str(uuid.uuid4())
+                session_df = {
+                    'session_id': session_id,
+                    'session_name': session_name,
+                    'session_time': datetime.now(pytz.timezone('UTC')).replace(microsecond=0).isoformat(),
+                    'session_id_cols': list(selected_id_cols),
+                    'session_input_cols': list(selected_input_cols),
+                    'session_output_cols': list(selected_output_cols),
+                    'session_all_filtered_cols': list(filtered_cols),
+                    'session_all_possible_cols': list(possible_cols)
+                }
 
-        if large_centered_button("Save session"):
-            session_id = str(uuid.uuid4())
-            session_df = {
-                'session_id': session_id,
-                'session_name': session_name,
-                'session_time': datetime.now(pytz.timezone('UTC')).replace(microsecond=0).isoformat(),
-                'session_id_cols': list(selected_id_cols),
-                'session_input_cols': list(selected_input_cols),
-                'session_output_cols': list(selected_output_cols),
-                'session_all_filtered_cols': list(filtered_cols),
-                'session_all_possible_cols': list(possible_cols)
-            }
+                # Including selected_output_cols in the merge, in order to include any UI edits done for the outputs
+                merged = pd.merge(full_df[['paramount_ground_truth', 'paramount_recording_id']+selected_output_cols],
+                                  read_df.drop(columns=['paramount_ground_truth']+selected_output_cols,
+                                               errors='ignore'), on='paramount_recording_id', how='right')
 
-            # Including selected_output_cols in the merge, in order to include any UI edits done for the outputs
-            merged = pd.merge(full_df[['paramount_ground_truth', 'paramount_recording_id']+selected_output_cols],
-                              read_df.drop(columns=['paramount_ground_truth']+selected_output_cols,
-                                           errors='ignore'), on='paramount_recording_id', how='right')
+                merged = merged.reindex(columns=read_df.columns)  # To not mess up the order of output cols
 
-            merged = merged.reindex(columns=read_df.columns)  # To not mess up the order of output cols
+                merged['paramount_ground_truth'] = merged['paramount_ground_truth'].apply(
+                    lambda x: session_id if x else '')
+                merged.to_csv(filename, index=False)
 
-            merged['paramount_ground_truth'] = merged['paramount_ground_truth'].apply(
-                lambda x: session_id if x else '')
-            merged.to_csv(filename, index=False)
+                session_csv = 'paramount_ground_truth_sessions.csv'
+                pd.DataFrame([session_df]).to_csv(session_csv, mode='a',
+                                                  header=not pd.io.common.file_exists(session_csv), index=False)
+                st.session_state['full_df'] = full_df
+                st.session_state['random_suggested_name'] = random_suggested_name()
+                st.rerun()
 
-            session_csv = 'paramount_ground_truth_sessions.csv'
-            pd.DataFrame([session_df]).to_csv(session_csv, mode='a',
-                                              header=not pd.io.common.file_exists(session_csv), index=False)
-            st.session_state['full_df'] = full_df
-            st.session_state['random_suggested_name'] = random_suggested_name()
-            st.rerun()
-
-        # TODO: For train mode, allow date/session/botid filters (imagine massive data).
-        # TODO: For train, try with other functions such that record.py is more robust.
+            # TODO: For train mode, allow date/session/botid filters (imagine massive data).
+            # TODO: For train, try with other functions such that record.py is more robust.
 
     else:
         st.write("No data found. Ensure you use @paramount.record decorator on any functions you want to record.")

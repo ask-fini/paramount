@@ -44,8 +44,15 @@ def record(func):
     def wrapper(*args, **kwargs):
         func_params = inspect.signature(func).parameters
         args_names = list(func_params.keys())
-        args_dict = dict(zip(args_names[:len(args)], args))
-        args_dict.update(kwargs)
+
+        # Create a dictionary for positional arguments with the prefix 'args_'
+        prefixed_args = {'args__' + key: value for key, value in zip(args_names[:len(args)], args)}
+
+        # Create a dictionary for keyword arguments with the prefix 'kwargs_'
+        prefixed_kwargs = {'kwargs__' + key: value for key, value in kwargs.items()}
+
+        # Merge the two dictionaries
+        args_dict = {**prefixed_args, **prefixed_kwargs}
 
         start_time = time()
         result = func(*args, **kwargs)
@@ -60,20 +67,20 @@ def record(func):
         # TODO: In the future, could measure CPU/MEM usage per invocation. Skipped for now to not add too much overhead
         # Skipped exception logging since functions may have internal handling which would be difficult to capture here
         result_data = {
-            'paramount_ground_truth': '',
-            'paramount_recording_id': str(uuid.uuid4()),
-            'paramount_timestamp': timestamp_now,
-            'paramount_function_name': func.__name__,
-            'paramount_execution_time': end_time - start_time,
+            'paramount__ground_truth': '',
+            'paramount__recording_id': str(uuid.uuid4()),
+            'paramount__timestamp': timestamp_now,
+            'paramount__function_name': func.__name__,
+            'paramount__execution_time': end_time - start_time,
             **{f'input_{k}': v for k, v in args_dict.items()}}  # Adds "input_*" to column names, for differentiation
         for i, output in enumerate(serialized_result, start=1):
             if isinstance(output, dict):
                 for key, value in output.items():
-                    result_data[f'output_{i}_{key}'] = value
+                    result_data[f'output__{i}_{key}'] = value
             else:
-                result_data[f'output_{i}'] = output
+                result_data[f'output__{i}'] = output
         df = pd.DataFrame([result_data])
-        df['paramount_timestamp'] = pd.to_datetime(df['paramount_timestamp'])
+        df['paramount__timestamp'] = pd.to_datetime(df['paramount__timestamp'])
 
         # Determine the filename based on the current date
         filename = "paramount_data.csv"
