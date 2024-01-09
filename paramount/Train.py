@@ -28,10 +28,11 @@ def run():
         output_cols = [col for col in possible_cols if col.startswith("output_")]
 
         paramount_suffix = ['recording_id', 'timestamp', 'function_name', 'execution_time']
-        paramount_cols = ['paramount_' + suffix for suffix in paramount_suffix]
+        paramount_cols = ['paramount__' + suffix for suffix in paramount_suffix]
         identifier_cols = paramount_cols + input_cols
 
-        col_mapping = {'paramount_': paramount_cols, 'input_': input_cols, 'output_': output_cols}
+        col_mapping = {'paramount__': paramount_cols, 'input_args__': input_cols,
+                       'input_kwargs__': input_cols, 'output__': output_cols}
 
         # Generate CSS selectors and rules
         css_rules = []
@@ -54,7 +55,7 @@ def run():
             filtered_cols = possible_cols
             selection_made = False
         else:
-            filtered_cols = ['paramount_ground_truth'] + selected_id_cols + selected_input_cols + selected_output_cols
+            filtered_cols = ['paramount__ground_truth'] + selected_id_cols + selected_input_cols + selected_output_cols
             filtered_cols = list(dict.fromkeys(filtered_cols))  # Avoids column name duplication but maintains order
             selection_made = True
 
@@ -64,10 +65,10 @@ def run():
         else:
             full_df = read_df.reset_index(drop=True)
             # Turn session_id into a checkbox in the UI
-            full_df['paramount_ground_truth'] = full_df['paramount_ground_truth'].apply(
+            full_df['paramount__ground_truth'] = full_df['paramount__ground_truth'].apply(
                 lambda x: False if pd.isna(x) else bool(str(x).strip()))
 
-        disabled_cols = set([col for col in full_df.columns if col not in ["paramount_ground_truth"] + selected_output_cols])
+        disabled_cols = set([col for col in full_df.columns if col not in ["paramount__ground_truth"] + selected_output_cols])
 
         column_config = {col: format_func(col) for col in full_df.columns}
 
@@ -100,13 +101,13 @@ def run():
                 }
 
                 # Including selected_output_cols in the merge, in order to include any UI edits done for the outputs
-                merged = pd.merge(full_df[['paramount_ground_truth', 'paramount_recording_id']+selected_output_cols],
-                                  read_df.drop(columns=['paramount_ground_truth']+selected_output_cols,
-                                               errors='ignore'), on='paramount_recording_id', how='right')
+                merged = pd.merge(full_df[['paramount__ground_truth', 'paramount__recording_id']+selected_output_cols],
+                                  read_df.drop(columns=['paramount__ground_truth']+selected_output_cols,
+                                               errors='ignore'), on='paramount__recording_id', how='right')
 
                 merged = merged.reindex(columns=read_df.columns)  # To not mess up the order of output cols
 
-                merged['paramount_ground_truth'] = merged['paramount_ground_truth'].apply(
+                merged['paramount__ground_truth'] = merged['paramount__ground_truth'].apply(
                     lambda x: session_id if x else '')
                 merged.to_csv(filename, index=False)
 

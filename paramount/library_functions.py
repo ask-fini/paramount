@@ -24,15 +24,16 @@ def random_suggested_name():
 
 def get_colors():
     colors = {
-        'paramount_': '#ACCBE1',  # Soft blue
-        'input_': '#C2E0C6',  # Pale green
-        'output_': '#FFF2CC',  # Light yellow
+        'paramount__': '#ACCBE1',  # Soft blue
+        'input_args__': '#C2E0C6',  # Pale green
+        'input_kwargs__': '#C2E0C6',  # Pale green
+        'output__': '#FFF2CC',  # Light yellow
     }
     return colors
 
 
 def format_func(col):
-    return col.split("__")[1:] if "__" in col else col
+    return col.split("__")[1] if "__" in col else col
 
 
 def color_columns(df: pd.DataFrame):

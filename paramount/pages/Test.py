@@ -35,7 +35,7 @@ if os.path.isfile(filename):
         filename = 'paramount_data.csv'
         full_df = pd.read_csv(filename)
 
-        session_df = full_df[full_df['paramount_ground_truth'] == session['session_id']]
+        session_df = full_df[full_df['paramount__ground_truth'] == session['session_id']]
 
         editable_columns = []
 
@@ -51,7 +51,7 @@ if os.path.isfile(filename):
         disabled_cols = set([col for col in full_df.columns if col not in editable_columns])
         column_config = {col: format_func(col) for col in session_df.columns}
         to_update = {column: None for column in session['session_all_possible_cols'] if column not in filtered_cols}
-        to_update['paramount_ground_truth'] = None
+        to_update['paramount__ground_truth'] = None
 
         column_config.update(to_update)
 
