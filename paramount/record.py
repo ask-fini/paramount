@@ -6,6 +6,7 @@ from datetime import datetime
 import pytz
 from time import time
 import uuid
+from flask import request, jsonify
 
 
 def is_jsonable(x):
@@ -40,57 +41,81 @@ def serialize_response(response):
         return serialize_item(response)
 
 
-def record(func):
-    def wrapper(*args, **kwargs):
-        func_params = inspect.signature(func).parameters
-        args_names = list(func_params.keys())
+def record(flask_app):
+    def decorator(func):
+        endpoint = f'/paramount/{func.__name__}'
 
-        # Create a dictionary for positional arguments with the prefix 'args_'
-        prefixed_args = {'args__' + key: value for key, value in zip(args_names[:len(args)], args)}
+        # Define the Flask view function.
+        @flask_app.route(endpoint, methods=['POST'])  # TODO: Password protect endpoint by default (+2FA?)
+        def view_func():
+            # Here we grab the JSON data from the request
+            data = request.json
+            # Based on your provided JSON structure, we consider all 'args' to be named/keyword arguments.
+            # There is no need to separate 'args' and 'kwargs' as they are both named.
+            func_kwargs = data.get('args', {})
 
-        # Create a dictionary for keyword arguments with the prefix 'kwargs_'
-        prefixed_kwargs = {'kwargs__' + key: value for key, value in kwargs.items()}
+            # If there are any additional keyword arguments provided under 'kwargs', update func_kwargs.
+            additional_kwargs = data.get('kwargs', {})
+            func_kwargs.update(additional_kwargs)
 
-        # Merge the two dictionaries
-        args_dict = {**prefixed_args, **prefixed_kwargs}
+            # Call the actual function with the provided keyword arguments.
+            result = func(**func_kwargs)
 
-        start_time = time()
-        result = func(*args, **kwargs)
-        end_time = time()
+            # Serialize the result and return as JSON
+            serialized_result = serialize_response(result)
+            return jsonify(serialized_result)
 
-        serialized_result = serialize_response(result)
+        def wrapper(*args, **kwargs):
+            func_params = inspect.signature(func).parameters
+            args_names = list(func_params.keys())
 
-        # Get current UTC timestamp
-        timestamp_now = datetime.now(pytz.timezone('UTC')).replace(microsecond=0).isoformat()
+            # Create a dictionary for positional arguments with the prefix 'args_'
+            prefixed_args = {'args__' + key: value for key, value in zip(args_names[:len(args)], args)}
 
-        # Update result data dictionary with invocation information
-        # TODO: In the future, could measure CPU/MEM usage per invocation. Skipped for now to not add too much overhead
-        # Skipped exception logging since functions may have internal handling which would be difficult to capture here
-        result_data = {
-            'paramount__ground_truth': '',
-            'paramount__recording_id': str(uuid.uuid4()),
-            'paramount__timestamp': timestamp_now,
-            'paramount__function_name': func.__name__,
-            'paramount__execution_time': end_time - start_time,
-            **{f'input_{k}': v for k, v in args_dict.items()}}  # Adds "input_*" to column names, for differentiation
-        for i, output in enumerate(serialized_result, start=1):
-            if isinstance(output, dict):
-                for key, value in output.items():
-                    result_data[f'output__{i}_{key}'] = value
+            # Create a dictionary for keyword arguments with the prefix 'kwargs_'
+            prefixed_kwargs = {'kwargs__' + key: value for key, value in kwargs.items()}
+
+            # Merge the two dictionaries
+            args_dict = {**prefixed_args, **prefixed_kwargs}
+
+            start_time = time()
+            result = func(*args, **kwargs)
+            end_time = time()
+
+            serialized_result = serialize_response(result)
+
+            # Get current UTC timestamp
+            timestamp_now = datetime.now(pytz.timezone('UTC')).replace(microsecond=0).isoformat()
+
+            # Update result data dictionary with invocation information
+            # TODO: In future, could measure CPU/MEM usage per invocation. Skipped for now to not add too much overhead
+            # Skipped exception logging since functions may have internal handling which would be difficult to capture
+            result_data = {
+                'paramount__ground_truth': '',
+                'paramount__recording_id': str(uuid.uuid4()),
+                'paramount__timestamp': timestamp_now,
+                'paramount__function_name': func.__name__,
+                'paramount__execution_time': end_time - start_time,
+                **{f'input_{k}': v for k, v in args_dict.items()}}  # Adds "input_*" to column names for differentiation
+            for i, output in enumerate(serialized_result, start=1):
+                if isinstance(output, dict):
+                    for key, value in output.items():
+                        result_data[f'output__{i}_{key}'] = value
+                else:
+                    result_data[f'output__{i}'] = output
+            df = pd.DataFrame([result_data])
+            df['paramount__timestamp'] = pd.to_datetime(df['paramount__timestamp'])
+
+            # Determine the filename based on the current date
+            filename = "paramount_data.csv"
+
+            # Check if the file exists, and if not, create it with header, else append without header
+            if not os.path.isfile(filename):
+                df.to_csv(filename, mode='a', index=False)
             else:
-                result_data[f'output__{i}'] = output
-        df = pd.DataFrame([result_data])
-        df['paramount__timestamp'] = pd.to_datetime(df['paramount__timestamp'])
+                df.to_csv(filename, mode='a', index=False, header=False)
 
-        # Determine the filename based on the current date
-        filename = "paramount_data.csv"
+            return result
 
-        # Check if the file exists, and if not, create it with header, else append without header
-        if not os.path.isfile(filename):
-            df.to_csv(filename, mode='a', index=False)
-        else:
-            df.to_csv(filename, mode='a', index=False, header=False)
-
-        return result
-
-    return wrapper
+        return wrapper
+    return decorator
