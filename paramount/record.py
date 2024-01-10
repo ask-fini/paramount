@@ -50,11 +50,10 @@ def record(flask_app):
         def view_func():
             # Here we grab the JSON data from the request
             data = request.json
-            # Based on your provided JSON structure, we consider all 'args' to be named/keyword arguments.
-            # There is no need to separate 'args' and 'kwargs' as they are both named.
-            func_kwargs = data.get('args', {})
 
-            # If there are any additional keyword arguments provided under 'kwargs', update func_kwargs.
+            # In the end separate handling of args/kwargs was not necessary
+            # Here we use kwargs syntax for all vars (in order to not pass unnamed vars)
+            func_kwargs = data.get('args', {})
             additional_kwargs = data.get('kwargs', {})
             func_kwargs.update(additional_kwargs)
 

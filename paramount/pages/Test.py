@@ -7,10 +7,43 @@ from paramount.library_functions import (
 )
 import os
 import ast
+import requests
+
+
+def invoke_via_api(func_name, base_url, args=None, kwargs=None):
+    # construct the endpoint based on the function name
+    endpoint = f'{base_url}/paramount/{func_name}'
+    data_payload = {}
+    if args is not None:
+        data_payload['args'] = args
+    if kwargs is not None:
+        data_payload['kwargs'] = kwargs
+    try:
+        # Send the POST request to the endpoint with JSON payload
+        response = requests.post(endpoint, json=data_payload)
+
+        # Check if the request was successful
+        if response.status_code == 200:
+            # Handle successful response
+            print("Response received:", response.json())
+            response = response.json()
+        else:
+            # Handle errors
+            err = (response.status_code, response.text)
+            print("Error:", err)
+            response = err
+    except requests.exceptions.RequestException as e:
+        # Handle request exceptions (e.g., connection errors)
+        print("Request failed:", e)
+        response = e
+
+    return response
+
 
 # hide_buttons()
 st.title("Test tweaks and accuracy")
 
+base_url = os.environ["FUNCTION_API"]
 filename = 'paramount_ground_truth_sessions.csv'
 if os.path.isfile(filename):
 
@@ -64,9 +97,20 @@ if os.path.isfile(filename):
         if selected_input_var:
             most_common_input_content = session_df[selected_input_var].mode()
             first_mode_value = most_common_input_content.iloc[0] if not most_common_input_content.empty else None
-            st.text_area("Most common value", first_mode_value)
-            if large_centered_button("Test against ground truth"):
-                st.write("Lol")
+            edited_var = st.text_area("Most common value", first_mode_value)
+            if edited_var:
+                test_set = session_df.copy()
+                test_set[selected_input_var] = edited_var
+                if large_centered_button("Test against ground truth"):
+                    outputs = []
+                    for index, row in test_set.iterrows():
+                        args = {}
+                        kwargs = {}
+                        func_dict = {'args': args, 'kwargs': kwargs}
+                        result = invoke_via_api(base_url=base_url, func_name=row['paramount__function_name'],
+                                                args=args, kwargs=kwargs)
+                        outputs.append(result)
+                    st.write(outputs)
 
     # User selects input param, edits it, then clicks test - upon which a cosine distance is measured to ground truth
 
