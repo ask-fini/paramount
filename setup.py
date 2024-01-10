@@ -25,5 +25,5 @@ setup(
    package_data={
         'paramount': ['thousand_random_words.txt'],
     },
-   install_requires=['streamlit', 'pandas', 'pytz', 'flask']
+   install_requires=['streamlit', 'pandas', 'pytz', 'flask', 'python-dotenv']
 )

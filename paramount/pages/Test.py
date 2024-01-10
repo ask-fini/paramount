@@ -4,10 +4,24 @@ from paramount.library_functions import (
     color_columns,
     format_func,
     large_centered_button,
+    hide_buttons,
 )
 import os
 import ast
 import requests
+from dotenv import load_dotenv, find_dotenv
+
+
+def get_values_dict(col_prefix, row):
+    vals = {col.replace(col_prefix, ''): row[col] for col in row.index if col.startswith(col_prefix)}
+    return vals
+
+
+def clean_and_parse(val):
+    try:
+        return None if pd.isna(val) else ast.literal_eval(val)
+    except (ValueError, SyntaxError, TypeError):
+        return val
 
 
 def invoke_via_api(func_name, base_url, args=None, kwargs=None):
@@ -40,11 +54,14 @@ def invoke_via_api(func_name, base_url, args=None, kwargs=None):
     return response
 
 
-# hide_buttons()
+hide_buttons()
 st.title("Test tweaks and accuracy")
-
-base_url = os.environ["FUNCTION_API"]
+if find_dotenv():
+    load_dotenv()
+base_url = os.getenv('FUNCTION_API_BASE_URL')
 filename = 'paramount_ground_truth_sessions.csv'
+
+
 if os.path.isfile(filename):
 
     sessions = pd.read_csv('paramount_ground_truth_sessions.csv')
@@ -92,7 +109,7 @@ if os.path.isfile(filename):
                             disabled=disabled_cols, hide_index=True)
 
         selected_input_var = st.selectbox("Select an input param to vary", session['session_input_cols'],
-                                        format_func=format_func)
+                                          format_func=format_func)
 
         if selected_input_var:
             most_common_input_content = session_df[selected_input_var].mode()
@@ -103,9 +120,10 @@ if os.path.isfile(filename):
                 test_set[selected_input_var] = edited_var
                 if large_centered_button("Test against ground truth"):
                     outputs = []
-                    for index, row in test_set.iterrows():
-                        args = {}
-                        kwargs = {}
+                    clean_test_set = test_set.applymap(clean_and_parse)
+                    for index, row in clean_test_set.iterrows():
+                        args = get_values_dict('input_args__', row)
+                        kwargs = get_values_dict('input_kwargs__', row)
                         func_dict = {'args': args, 'kwargs': kwargs}
                         result = invoke_via_api(base_url=base_url, func_name=row['paramount__function_name'],
                                                 args=args, kwargs=kwargs)
