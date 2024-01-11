@@ -39,7 +39,6 @@ def invoke_via_api(func_name, base_url, args=None, kwargs=None):
         # Check if the request was successful
         if response.status_code == 200:
             # Handle successful response
-            print("Response received:", response.json())
             response = response.json()
         else:
             # Handle errors
@@ -119,16 +118,30 @@ if os.path.isfile(filename):
                 test_set = session_df.copy()
                 test_set[selected_input_var] = edited_var
                 if large_centered_button("Test against ground truth"):
-                    outputs = []
+                    output = []
                     clean_test_set = test_set.applymap(clean_and_parse)
                     for index, row in clean_test_set.iterrows():
                         args = get_values_dict('input_args__', row)
                         kwargs = get_values_dict('input_kwargs__', row)
                         func_dict = {'args': args, 'kwargs': kwargs}
+
                         result = invoke_via_api(base_url=base_url, func_name=row['paramount__function_name'],
                                                 args=args, kwargs=kwargs)
-                        outputs.append(result)
-                    st.write(outputs)
+                        output.append(result)
+                        for output_col in list(session['session_output_cols']):
+                            identifying_info = output_col.split('__')[1].split('_')
+                            output_index = int(identifying_info[0])-1
+                            output_colname = None if len(identifying_info) < 2 else "_".join(identifying_info[1:])
+                            data_item = result[output_index] if not output_colname else result[output_index][output_colname]
+                            print(f"idx: {output_index}, colname: {output_colname}, data_item: {data_item}")
+                            clean_test_set.at[index, 'test_'+output_col] = data_item
+                    st.write(output)
+                    st.write(clean_test_set)
+
+
+
+
+
 
     # User selects input param, edits it, then clicks test - upon which a cosine distance is measured to ground truth
 
