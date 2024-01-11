@@ -11,11 +11,11 @@ def get_words():
     return word_list
 
 
-def large_centered_button(text):
+def large_centered_button(text, on_click=None):
     st.markdown("<style> .stButton>button { height: 3em; width: 20em; } </style>", unsafe_allow_html=True)
     st.markdown("<style>div.row-widget.stButton { display: flex; justify-content: center; }</style>",
                 unsafe_allow_html=True)
-    return st.button(text)
+    return st.button(text, on_click=on_click)
 
 
 def random_suggested_name():
@@ -32,14 +32,23 @@ def get_colors():
     return colors
 
 
+def test_colors():
+    colors = {
+        'test_output__': '#E6E6FA',  # Lavender (Light Purple)
+        'output__': '#D3D3D3',  # Light Gray
+    }
+    return colors
+
+
 def format_func(col):
     return col.split("__")[1] if "__" in col else col
 
 
-def color_columns(df: pd.DataFrame):
+def color_columns(df: pd.DataFrame, regular_colors=True):
     # Create a color map based on column prefixes
+    color_scheme = get_colors if regular_colors else test_colors
     color_map = {col: f'background-color: {color}' for prefix, color in
-                 get_colors().items() for col in df.columns if col.startswith(prefix)}
+                 color_scheme().items() for col in df.columns if col.startswith(prefix)}
 
     # Styling function to apply color_map
     styler = df.style.apply(lambda x: [color_map.get(x.name, '') for _ in x], axis=0)

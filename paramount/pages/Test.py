@@ -60,6 +60,13 @@ if find_dotenv():
 base_url = os.getenv('FUNCTION_API_BASE_URL')
 filename = 'paramount_ground_truth_sessions.csv'
 
+if 'clicked_eval' not in st.session_state:
+    st.session_state.clicked_eval = False
+
+
+def clicked():
+    st.session_state.clicked_eval = True
+
 
 if os.path.isfile(filename):
 
@@ -117,31 +124,48 @@ if os.path.isfile(filename):
             if edited_var:
                 test_set = session_df.copy()
                 test_set[selected_input_var] = edited_var
-                if large_centered_button("Test against ground truth"):
-                    output = []
+                large_centered_button("Test against ground truth", clicked)
+                if st.session_state.clicked_eval:
                     clean_test_set = test_set.applymap(clean_and_parse)
-                    for index, row in clean_test_set.iterrows():
+                    session_output_cols = list(session['session_output_cols'])
+                    progress_bar = st.progress(0, "Running against ground truth")
+                    total_length = len(clean_test_set)
+                    for i, (index, row) in enumerate(clean_test_set.iterrows()):
                         args = get_values_dict('input_args__', row)
                         kwargs = get_values_dict('input_kwargs__', row)
                         func_dict = {'args': args, 'kwargs': kwargs}
 
                         result = invoke_via_api(base_url=base_url, func_name=row['paramount__function_name'],
                                                 args=args, kwargs=kwargs)
-                        output.append(result)
-                        for output_col in list(session['session_output_cols']):
+                        progress_bar.progress((i + 1) / total_length, "Running against ground truth")
+                        for output_col in session_output_cols:
+                            # Match function outputs to column names
                             identifying_info = output_col.split('__')[1].split('_')
                             output_index = int(identifying_info[0])-1
                             output_colname = None if len(identifying_info) < 2 else "_".join(identifying_info[1:])
                             data_item = result[output_index] if not output_colname else result[output_index][output_colname]
-                            print(f"idx: {output_index}, colname: {output_colname}, data_item: {data_item}")
                             clean_test_set.at[index, 'test_'+output_col] = data_item
-                    st.write(output)
-                    st.write(clean_test_set)
 
+                    progress_bar.empty()
+                    cols_to_display = session_output_cols + ['test_'+item for item in session_output_cols]
 
+                    clean_test_set = clean_test_set[cols_to_display]
+                    test_col_config = {col: format_func(col) for col in clean_test_set.columns}
+                    clean_test_set['evaluation'] = None
+                    test_col_config['evaluation'] = st.column_config.SelectboxColumn(
+                        "Evaluation",
+                        help="Evaluation of test run",
+                        width="medium",
+                        options=[
+                            "✅ Accurate",
+                            "❌ Inaccurate",
+                        ],
+                        required=True,
+                    )
 
-
-
+                    st.data_editor(data=color_columns(clean_test_set, False),
+                                   column_config=test_col_config, use_container_width=True,
+                                   disabled=cols_to_display, hide_index=True)
 
     # User selects input param, edits it, then clicks test - upon which a cosine distance is measured to ground truth
 
