@@ -11,11 +11,11 @@ def get_words():
     return word_list
 
 
-def large_centered_button(text, on_click=None):
+def large_centered_button(text, on_click=None, args=None):
     st.markdown("<style> .stButton>button { height: 3em; width: 20em; } </style>", unsafe_allow_html=True)
     st.markdown("<style>div.row-widget.stButton { display: flex; justify-content: center; }</style>",
                 unsafe_allow_html=True)
-    return st.button(text, on_click=on_click)
+    return st.button(text, on_click=on_click, args=args)
 
 
 def random_suggested_name():
