@@ -165,7 +165,10 @@ if os.path.isfile(filename):
                         width="medium",
                         options=[
                             "✅ Accurate",
-                            "❌ Inaccurate",
+                            "❔ Missing Info",  # RAG failed or Document missing
+                            "❌ Irrelevant Extra Info",  # RAG failed, included too much
+                            "🕰️ Wrong/Outdated Info",  # Document needs updating
+                            "📃 Didn't follow instruction"  # Prompt was wrong
                         ],
                         required=True,
                     )
@@ -174,10 +177,16 @@ if os.path.isfile(filename):
                                    column_config=test_col_config, use_container_width=True, on_change=clicked,
                                    args=('clean_test_set', clean_test_set), disabled=cols_to_display, hide_index=True)
 
-    # User selects input param, edits it, then clicks test - upon which a cosine distance is measured to ground truth
+    # LEFTOVER:
+    # 0) Fix clicking "Test" button again, Fix allowing multi ground truths (->clist of session ids)
+    # 1) TFIDF cosine similarity (%)
+    # 2) Display overall scoring with metric
+    # 3) Save to postgres. One table per function? then "function name" col is redundant
+    # 4) Setup and Run on Cloud Run + User/Password protect
 
-    # Challenge: How to replay in the UI - How to invoke the recorded function? Will need env vars from prod enviro?
-    # Best way to do it is probably co-run (on diff port) with whichever production docker the user is using
-    # Eg as an addition of "paramount *" on top of whichever pre-existing Docker run command (CMD exec)
+    # LATER
+    # LLM similarity
+    # Evaluation pre-fill
+
 else:
     st.write("No sessions found. Ensure you have recorded data, and that you have a saved ground truth session.")
