@@ -3,6 +3,7 @@ import streamlit as st
 import os
 import uuid
 import pytz
+import ast
 from datetime import datetime
 from paramount.library_functions import (
     hide_buttons,
@@ -66,11 +67,16 @@ def run():
             full_df = read_df.reset_index(drop=True)
             # Turn session_id into a checkbox in the UI
             full_df['paramount__ground_truth'] = full_df['paramount__ground_truth'].apply(
-                lambda x: False if pd.isna(x) else bool(str(x).strip()))
+                lambda x: [] if pd.isna(x) else
+                (ast.literal_eval(x) if isinstance(x, str) and x.strip().startswith("[") else [x]))
+            full_df.insert(0, 'paramount__ground_truth_boolean',  # insert at 0 makes it the first column
+                           full_df['paramount__ground_truth'].apply(lambda x: bool(x)))
 
-        disabled_cols = set([col for col in full_df.columns if col not in ["paramount__ground_truth"] + selected_output_cols])
+        disabled_cols = set([col for col in full_df.columns if col not in ["paramount__ground_truth_boolean"] + selected_output_cols])
 
         column_config = {col: format_func(col) for col in full_df.columns}
+        column_config['paramount__ground_truth_boolean'] = 'Ground Truth?'
+        column_config['paramount__ground_truth'] = None  # Hides the column
 
         if selection_made:  # Updates the config for unselected cols to hide them
             column_config.update({column: None for column in possible_cols if column not in filtered_cols})
@@ -101,14 +107,23 @@ def run():
                 }
 
                 # Including selected_output_cols in the merge, in order to include any UI edits done for the outputs
-                merged = pd.merge(full_df[['paramount__ground_truth', 'paramount__recording_id']+selected_output_cols],
+                merged = pd.merge(full_df[['paramount__ground_truth', 'paramount__ground_truth_boolean',
+                                           'paramount__recording_id']+selected_output_cols],
                                   read_df.drop(columns=['paramount__ground_truth']+selected_output_cols,
                                                errors='ignore'), on='paramount__recording_id', how='right')
 
-                merged = merged.reindex(columns=read_df.columns)  # To not mess up the order of output cols
+                st.write(merged)
 
-                merged['paramount__ground_truth'] = merged['paramount__ground_truth'].apply(
-                    lambda x: session_id if x else '')
+                # To not mess up the order of output cols
+                merged = merged.reindex(columns=['paramount__ground_truth_boolean'] + read_df.columns.tolist())
+
+                # Ensure session_id is appended to the list of ground truth session ids if the boolean is true
+                merged['paramount__ground_truth'] = merged.apply(
+                    lambda row: row['paramount__ground_truth'] + [session_id] if row[
+                        'paramount__ground_truth_boolean'] else row['paramount__ground_truth'],
+                    axis=1
+                )
+                merged = merged.drop(columns=['paramount__ground_truth_boolean'])
                 merged.to_csv(filename, index=False)
 
                 session_csv = 'paramount_ground_truth_sessions.csv'

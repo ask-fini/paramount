@@ -93,7 +93,11 @@ if os.path.isfile(filename):
         filename = 'paramount_data.csv'
         full_df = pd.read_csv(filename)
 
-        session_df = full_df[full_df['paramount__ground_truth'] == session['session_id']]
+        # TODO: These two operations may be very inefficient for large amount of rows?
+        full_df['paramount__ground_truth'] = full_df['paramount__ground_truth'].apply(
+            lambda x: ast.literal_eval(x) if isinstance(x, str) and x.strip().startswith('[') and x.strip().endswith(
+                ']') else [])
+        session_df = full_df[full_df['paramount__ground_truth'].apply(lambda ids: session['session_id'] in ids)]
 
         editable_columns = []
 
@@ -177,10 +181,15 @@ if os.path.isfile(filename):
                                    column_config=test_col_config, use_container_width=True, on_change=clicked,
                                    args=('clean_test_set', clean_test_set), disabled=cols_to_display, hide_index=True)
 
+    # DONE:
+    # 0) Fix allowing multi ground truths (->list of session ids)
+
     # LEFTOVER:
-    # 0) Fix clicking "Test" button again, Fix allowing multi ground truths (->clist of session ids)
+    # 0) Fix TODO
+    # 0.5) Fix clicking "Test" button again
     # 1) TFIDF cosine similarity (%)
     # 2) Display overall scoring with metric
+
     # 3) Save to postgres. One table per function? then "function name" col is redundant
     # 4) Setup and Run on Cloud Run + User/Password protect
 
