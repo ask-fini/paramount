@@ -9,7 +9,7 @@ with open(os.path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 setup(
    name='paramount',
    version='0.0.3',
-   description='Automated accuracy measurements for LLMs',
+   description='Automated evals for AI support bots',
    long_description=long_description,
    long_description_content_type='text/markdown',
    entry_points={

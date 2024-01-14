@@ -219,14 +219,6 @@ if os.path.isfile(filename):
 
                     st.session_state['clicked_eval'] = False
 
-    # DONE:
-    # 0) Fix allowing multi ground truths (->list of session ids)
-    # 0.5) Fix clicking "Test" button again
-    # 1) TFIDF cosine similarity (%) + overall scoring
-
-    # LEFTOVER:
-    # 4) Setup and Run on Cloud Run + Password protect
-
     # LATER
     # Fix Large nr of rows TODO
     # LLM similarity
