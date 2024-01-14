@@ -43,7 +43,7 @@ def serialize_response(response):
 
 def record(flask_app):
     def decorator(func):
-        endpoint = f'/paramount/{func.__name__}'
+        endpoint = f'/paramount_functions/{func.__name__}'
 
         # Define the Flask view function.
         @flask_app.route(endpoint, methods=['POST'])  # TODO: Password protect endpoint by default (+2FA?)

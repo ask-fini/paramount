@@ -29,7 +29,7 @@ def clean_and_parse(val):
 
 def invoke_via_api(func_name, base_url, args=None, kwargs=None):
     # construct the endpoint based on the function name
-    endpoint = f'{base_url}/paramount/{func_name}'
+    endpoint = f'{base_url}/paramount_functions/{func_name}'
     data_payload = {}
     if args is not None:
         data_payload['args'] = args
