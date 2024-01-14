@@ -1,3 +1,3 @@
 # paramount
 
-Automated accuracy measurements for LLMs
+Automated evals for AI support bots
