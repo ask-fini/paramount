@@ -18,6 +18,27 @@ def large_centered_button(text, on_click=None, args=None):
     return st.button(text, on_click=on_click, args=args)
 
 
+def center_metric():
+    css = '''
+    [data-testid="stMetric"] {
+        width: fit-content;
+        margin: auto;
+    }
+
+    [data-testid="stMetric"] > div {
+        width: fit-content;
+        margin: auto;
+    }
+
+    [data-testid="stMetric"] label {
+        width: fit-content;
+        margin: auto;
+    }
+    '''
+
+    st.markdown(f'<style>{css}</style>', unsafe_allow_html=True)
+
+
 def random_suggested_name():
     return ' '.join([item[0].upper() + item[1:].lower() for item in random.sample(get_words(), 2)])
 

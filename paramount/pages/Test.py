@@ -5,11 +5,14 @@ from paramount.library_functions import (
     format_func,
     large_centered_button,
     hide_buttons,
+    center_metric,
 )
 import os
 import ast
 import requests
 from dotenv import load_dotenv, find_dotenv
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
 
 def get_values_dict(col_prefix, row):
@@ -130,8 +133,13 @@ if os.path.isfile(filename):
             if edited_var:
                 test_set = session_df.copy()
                 test_set[selected_input_var] = edited_var
+
+                selected_output_var = st.selectbox(
+                    "Select an output param to measure similarity: ground truth <> test set",
+                    session['session_output_cols'], format_func=format_func)
+
                 large_centered_button("Test against ground truth", clicked, args=('clicked_eval', True))
-                if st.session_state['clicked_eval']:
+                if st.session_state['clicked_eval'] and selected_output_var:
                     session_output_cols = list(session['session_output_cols'])
                     cols_to_display = session_output_cols + ['test_' + item for item in session_output_cols]
 
@@ -161,6 +169,21 @@ if os.path.isfile(filename):
                         progress_bar.empty()
                         clean_test_set = clean_test_set[cols_to_display]
 
+                        vectorizer = TfidfVectorizer()
+                        tfidf_matrix = vectorizer.fit_transform(clean_test_set[selected_output_var])
+
+                        # Transform both the ground truth and test set data (columns 1 and 2)
+                        tfidf_matrix_ground_truth = vectorizer.transform(clean_test_set[selected_output_var])
+                        tfidf_matrix_test_set = vectorizer.transform(clean_test_set['test_'+selected_output_var])
+
+                        # Calculate cosine similarity between the corresponding rows in columns 1 and 2
+                        cosine_similarities = [cosine_similarity(tfidf_matrix_ground_truth[i:i + 1], tfidf_matrix_test_set[i:i + 1])[0][0]
+                                               for i in range(tfidf_matrix_ground_truth.shape[0])]
+
+                        # Add the cosine similarity scores to the DataFrame
+                        clean_test_set['cosine_similarity'] = cosine_similarities
+                        clean_test_set['cosine_similarity'] *= 100  # For percent display
+
                     test_col_config = {col: format_func(col) for col in clean_test_set.columns}
                     clean_test_set['evaluation'] = None
                     test_col_config['evaluation'] = st.column_config.SelectboxColumn(
@@ -177,25 +200,38 @@ if os.path.isfile(filename):
                         required=True,
                     )
 
+                    test_col_config['cosine_similarity'] = st.column_config.ProgressColumn(
+                        "Similarity",
+                        help="Cosine similarity versus ground truth",
+                        format="%.1f%%",
+                        min_value=0,
+                        max_value=100,
+                    )
+
                     st.data_editor(data=color_columns(clean_test_set, False),
                                    column_config=test_col_config, use_container_width=True, on_change=clicked,
                                    args=('clean_test_set', clean_test_set), disabled=cols_to_display, hide_index=True)
 
+                    average_similarity = clean_test_set['cosine_similarity'].mean()
+                    formatted_average_similarity = "{:.2f}%".format(average_similarity)
+                    center_metric()
+                    st.metric(label="Average similarity", value=formatted_average_similarity)
+
+                    st.session_state['clicked_eval'] = False
+
     # DONE:
     # 0) Fix allowing multi ground truths (->list of session ids)
+    # 0.5) Fix clicking "Test" button again
+    # 1) TFIDF cosine similarity (%) + overall scoring
 
     # LEFTOVER:
-    # 0) Fix TODO
-    # 0.5) Fix clicking "Test" button again
-    # 1) TFIDF cosine similarity (%)
-    # 2) Display overall scoring with metric
-
-    # 3) Save to postgres. One table per function? then "function name" col is redundant
-    # 4) Setup and Run on Cloud Run + User/Password protect
+    # 4) Setup and Run on Cloud Run + Password protect
 
     # LATER
+    # Fix Large nr of rows TODO
     # LLM similarity
     # Evaluation pre-fill
+    # Save to postgres. One table per function? then "function name" col is redundant
 
 else:
     st.write("No sessions found. Ensure you have recorded data, and that you have a saved ground truth session.")
