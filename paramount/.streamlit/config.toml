@@ -4,3 +4,6 @@ gatherUsageStats = false
 [theme]
 base="light"
 primaryColor="#4489bb"
+
+[server]
+headless = true
