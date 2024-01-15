@@ -2,6 +2,12 @@ import sys
 import os
 import streamlit.web.cli as stcli
 
+# Set Streamlit configuration options via environment variables
+os.environ["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
+os.environ["STREAMLIT_THEME_BASE"] = "light"
+os.environ["STREAMLIT_THEME_PRIMARY_COLOR"] = "#4489bb"
+os.environ["STREAMLIT_SERVER_HEADLESS"] = "true"
+
 
 def main():
     if len(sys.argv) == 1:
