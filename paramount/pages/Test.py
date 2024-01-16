@@ -74,8 +74,7 @@ def clicked(var, value):
 
 
 if os.path.isfile(filename):
-
-    sessions = pd.read_csv('paramount_ground_truth_sessions.csv')
+    sessions = pd.read_csv(filename)
     sessions['session_time'] = pd.to_datetime(sessions['session_time'])
     timestr = sessions.sort_values('session_time')['session_time'].dt.strftime('%Y-%m-%d %H:%M:%S')
     namestr = sessions.sort_values('session_time')['session_name']
@@ -164,12 +163,17 @@ if os.path.isfile(filename):
                                 output_index = int(identifying_info[0])-1
                                 output_colname = None if len(identifying_info) < 2 else "_".join(identifying_info[1:])
                                 data_item = result[output_index] if not output_colname else result[output_index][output_colname]
-                                clean_test_set.at[index, 'test_'+output_col] = data_item
+                                clean_test_set.at[index, 'test_'+output_col] = str(data_item)
 
                         progress_bar.empty()
                         clean_test_set = clean_test_set[cols_to_display]
 
                         vectorizer = TfidfVectorizer()
+
+                        # To ensure comparability
+                        clean_test_set[selected_output_var] = clean_test_set[selected_output_var].astype(str)
+                        clean_test_set['test_' + selected_output_var] = clean_test_set['test_' + selected_output_var].astype(str)
+
                         tfidf_matrix = vectorizer.fit_transform(clean_test_set[selected_output_var])
 
                         # Transform both the ground truth and test set data (columns 1 and 2)
@@ -215,7 +219,7 @@ if os.path.isfile(filename):
                     average_similarity = clean_test_set['cosine_similarity'].mean()
                     formatted_average_similarity = "{:.2f}%".format(average_similarity)
                     center_metric()
-                    st.metric(label="Average similarity", value=formatted_average_similarity)
+                    st.metric(label="Average similarity to ground truth", value=formatted_average_similarity)
 
                     st.session_state['clicked_eval'] = False
 
