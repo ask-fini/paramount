@@ -1,12 +1,15 @@
 import pandas as pd
 import json
 import inspect
-import os
 from datetime import datetime
 import pytz
 from time import time
 import uuid
 from flask import request, jsonify
+from .db_connector import db
+from dotenv import load_dotenv, find_dotenv
+if find_dotenv():
+    load_dotenv()
 
 
 def is_jsonable(x):
@@ -42,6 +45,8 @@ def serialize_response(response):
 
 
 def record(flask_app):
+    db_instance = db.get_database()
+
     def decorator(func):
         endpoint = f'/paramount_functions/{func.__name__}'
 
@@ -105,14 +110,7 @@ def record(flask_app):
             df = pd.DataFrame([result_data])
             df['paramount__timestamp'] = pd.to_datetime(df['paramount__timestamp'])
 
-            # Determine the filename based on the current date
-            filename = "paramount_data.csv"
-
-            # Check if the file exists, and if not, create it with header, else append without header
-            if not os.path.isfile(filename):
-                df.to_csv(filename, mode='a', index=False)
-            else:
-                df.to_csv(filename, mode='a', index=False, header=False)
+            db_instance.create_or_append(df, 'paramount_data')
 
             return result
 

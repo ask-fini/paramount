@@ -1,12 +1,26 @@
 # CSV implementation
-from db import Database
+from .db import Database
 import os
+import pandas as pd
 
 
 class CSVDatabase(Database):
-    def __init__(self, filepath):
-        self.filepath = filepath
+    def create_or_append(self, df, table_name):
+        # Check if the file exists, and if not, create it with header, else append without header
+        filename = table_name+'.csv'
+        if not os.path.isfile(filename):
+            df.to_csv(filename, mode='a', index=False)
+        else:
+            df.to_csv(filename, mode='a', index=False, header=False)
 
-    def create_or_append(self, dataframe, table_name):
-        if_exists_option = 'append' if os.path.isfile(self.filepath) else 'replace'
-        dataframe.to_csv(self.filepath, mode='a', header=not os.path.exists(self.filepath), index=False, if_exists=if_exists_option)
+    def table_exists(self, table_name):
+        return os.path.isfile(table_name+'.csv')
+
+    def update_ground_truth(self, df, table_name):
+        df.to_csv(table_name+'.csv', index=False)
+
+    def get_records(self, table_name):
+        return pd.read_csv(table_name+'.csv')
+
+    def get_sessions(self, table_name):
+        return pd.read_csv(table_name+'.csv')

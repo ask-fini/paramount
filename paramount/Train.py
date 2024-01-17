@@ -1,6 +1,5 @@
 import pandas as pd
 import streamlit as st
-import os
 import uuid
 import pytz
 import ast
@@ -12,17 +11,20 @@ from paramount.library_functions import (
     get_colors,
     format_func,
     large_centered_button,
+    db_connection,
 )
 st.set_page_config(layout="wide")
+db_instance = db_connection()
 
 
 def run():
     hide_buttons()
     st.title('Record ground truth data')
 
-    filename = 'paramount_data.csv'
-    if os.path.isfile(filename):
-        read_df = pd.read_csv(filename)
+    ground_truth_table_name = 'paramount_data'
+
+    if db_instance.table_exists(ground_truth_table_name):
+        read_df = db_instance.get_records(ground_truth_table_name)
         possible_cols = read_df.columns
 
         input_cols = [col for col in possible_cols if col.startswith("input_")]
@@ -112,8 +114,6 @@ def run():
                                   read_df.drop(columns=['paramount__ground_truth']+selected_output_cols,
                                                errors='ignore'), on='paramount__recording_id', how='right')
 
-                st.write(merged)
-
                 # To not mess up the order of output cols
                 merged = merged.reindex(columns=['paramount__ground_truth_boolean'] + read_df.columns.tolist())
 
@@ -124,11 +124,11 @@ def run():
                     axis=1
                 )
                 merged = merged.drop(columns=['paramount__ground_truth_boolean'])
-                merged.to_csv(filename, index=False)
 
-                session_csv = 'paramount_ground_truth_sessions.csv'
-                pd.DataFrame([session_df]).to_csv(session_csv, mode='a',
-                                                  header=not pd.io.common.file_exists(session_csv), index=False)
+                db_instance.update_ground_truth(merged, ground_truth_table_name)
+                session_table_name = 'paramount_ground_truth_sessions'
+                db_instance.create_or_append(pd.DataFrame([session_df]), session_table_name)
+
                 st.session_state['full_df'] = full_df
                 st.session_state['random_suggested_name'] = random_suggested_name()
                 st.rerun()

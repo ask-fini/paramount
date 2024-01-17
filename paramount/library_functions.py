@@ -2,6 +2,7 @@ import streamlit as st
 from importlib.resources import read_text
 import random
 import pandas as pd
+from .db_connector import db
 
 
 @st.cache_data
@@ -9,6 +10,12 @@ def get_words():
     word_file = read_text('paramount', 'thousand_random_words.txt')
     word_list = word_file.splitlines()
     return word_list
+
+
+@st.cache_resource
+def db_connection():
+    db_instance = db.get_database()
+    return db_instance
 
 
 def large_centered_button(text, on_click=None, args=None):

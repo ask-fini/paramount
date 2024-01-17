@@ -6,6 +6,7 @@ from paramount.library_functions import (
     large_centered_button,
     hide_buttons,
     center_metric,
+    db_connection,
 )
 import os
 import ast
@@ -13,6 +14,7 @@ import requests
 from dotenv import load_dotenv, find_dotenv
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+db_instance = db_connection()
 
 
 def get_values_dict(col_prefix, row):
@@ -61,7 +63,7 @@ st.title("Test tweaks and accuracy")
 if find_dotenv():
     load_dotenv()
 base_url = os.getenv('FUNCTION_API_BASE_URL')
-filename = 'paramount_ground_truth_sessions.csv'
+sessions_table = 'paramount_ground_truth_sessions'
 
 inits = ['clicked_eval']
 for var in inits:
@@ -73,8 +75,8 @@ def clicked(var, value):
     st.session_state[var] = value
 
 
-if os.path.isfile(filename):
-    sessions = pd.read_csv(filename)
+if db_instance.table_exists(sessions_table):
+    sessions = db_instance.get_sessions(sessions_table)
     sessions['session_time'] = pd.to_datetime(sessions['session_time'])
     timestr = sessions.sort_values('session_time')['session_time'].dt.strftime('%Y-%m-%d %H:%M:%S')
     namestr = sessions.sort_values('session_time')['session_name']
@@ -92,8 +94,8 @@ if os.path.isfile(filename):
         session = sessions.loc[session_index]
         session = session.copy()  # to avoid SettingWithCopyWarning in our invocation of ast.literal_eval
 
-        filename = 'paramount_data.csv'
-        full_df = pd.read_csv(filename)
+        records_table_name = 'paramount_data'
+        full_df = db_instance.get_records(records_table_name)
 
         # TODO: These two operations may be very inefficient for large amount of rows?
         full_df['paramount__ground_truth'] = full_df['paramount__ground_truth'].apply(
@@ -227,7 +229,9 @@ if os.path.isfile(filename):
     # Fix Large nr of rows TODO
     # LLM similarity
     # Evaluation pre-fill
+    # Save evals
     # Save to postgres. One table per function? then "function name" col is redundant
+    # There is still a test-session-overwrite bug. happens when switching btw Train/Test page and recording new session
 
 else:
     st.write("No sessions found. Ensure you have recorded data, and that you have a saved ground truth session.")
