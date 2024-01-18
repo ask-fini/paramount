@@ -19,8 +19,5 @@ class CSVDatabase(Database):
     def update_ground_truth(self, df, table_name):
         df.to_csv(table_name+'.csv', index=False)
 
-    def get_records(self, table_name):
-        return pd.read_csv(table_name+'.csv')
-
-    def get_sessions(self, table_name):
+    def get_table(self, table_name):
         return pd.read_csv(table_name+'.csv')

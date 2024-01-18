@@ -76,7 +76,7 @@ def clicked(var, value):
 
 
 if db_instance.table_exists(sessions_table):
-    sessions = db_instance.get_sessions(sessions_table)
+    sessions = db_instance.get_table(sessions_table)
     sessions['session_time'] = pd.to_datetime(sessions['session_time'])
     timestr = sessions.sort_values('session_time')['session_time'].dt.strftime('%Y-%m-%d %H:%M:%S')
     namestr = sessions.sort_values('session_time')['session_name']
@@ -95,7 +95,7 @@ if db_instance.table_exists(sessions_table):
         session = session.copy()  # to avoid SettingWithCopyWarning in our invocation of ast.literal_eval
 
         records_table_name = 'paramount_data'
-        full_df = db_instance.get_records(records_table_name)
+        full_df = db_instance.get_table(records_table_name)
 
         # TODO: These two operations may be very inefficient for large amount of rows?
         full_df['paramount__ground_truth'] = full_df['paramount__ground_truth'].apply(

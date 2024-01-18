@@ -24,7 +24,7 @@ def run():
     ground_truth_table_name = 'paramount_data'
 
     if db_instance.table_exists(ground_truth_table_name):
-        read_df = db_instance.get_records(ground_truth_table_name)
+        read_df = db_instance.get_table(ground_truth_table_name)
         possible_cols = read_df.columns
 
         input_cols = [col for col in possible_cols if col.startswith("input_")]

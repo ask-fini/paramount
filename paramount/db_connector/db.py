@@ -20,15 +20,11 @@ class Database(ABC):
         pass
 
     @abstractmethod
-    def get_records(self, table_name):
-        pass
-
-    @abstractmethod
     def update_ground_truth(self, df, table_name):
         pass
 
     @abstractmethod
-    def get_sessions(self, table_name):
+    def get_table(self, table_name):
         pass
 
 
