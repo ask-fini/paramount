@@ -2,8 +2,9 @@ import os
 import pandas as pd
 from .db import Database
 import traceback
-from sqlalchemy import create_engine, inspect, Table, MetaData
-from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy import create_engine, inspect, insert, Table, MetaData, select
+from sqlalchemy.dialects.postgresql import JSONB, UUID, TEXT
+from sqlalchemy.exc import SQLAlchemyError
 from dotenv import load_dotenv, find_dotenv
 if find_dotenv():
     load_dotenv()
@@ -12,16 +13,47 @@ if find_dotenv():
 class PostgresDatabase(Database):
     def __init__(self):  # connection string may need postgresql+psycopg2 as prefix to work
         self.engine = create_engine(os.getenv('PARAMOUNT_POSTGRES_CONNECTION_STRING'))
+        self.existing_tables = {}
 
     def create_or_append(self, dataframe, table_name):
-        # Note that this will create a new table or append if it exists, and does not handle schema migrations.
-        dataframe.to_sql(table_name, self.engine, if_exists='append', index=False)
+        # Make a copy of the DataFrame to avoid modifying the original
+        df_copy = dataframe.copy()
+        dtype = {}
+
+        for col in df_copy.columns:
+            # Get the first non-null element in the column
+            first_non_null = df_copy[col].dropna().iloc[0] if not df_copy[col].dropna().empty else None
+            if first_non_null is not None:
+                # If the first non-null element is a string, use the string data type
+                if isinstance(first_non_null, str):
+                    dtype[col] = TEXT
+                # If the first non-null element is a list or dict, use JSONB data type
+                elif isinstance(first_non_null, (list, dict)):
+                    dtype[col] = JSONB
+
+        cols = ['paramount__recording_id'] + df_copy.columns.drop('paramount__recording_id').tolist()
+        df_copy = df_copy[cols]
+        df_copy.set_index('paramount__recording_id', inplace=True)
+        dtype['paramount__recording_id'] = UUID
+
+        try:  # Try to append the copy of the DataFrame to the SQL table, handle potential SQL errors
+            df_copy.to_sql(table_name, self.engine, if_exists='append', dtype=dtype, index=True)
+            print(f"Data appended to {table_name} successfully.")
+        except SQLAlchemyError as e:
+            err_tcb = traceback.format_exc()
+            print(f"An error occurred while appending to {table_name}: {e}: {err_tcb}")
+            raise  # Re-raise the exception for further handling if necessary
 
     def table_exists(self, table_name):
-        # We can use the SQLAlchemy Inspector to check for the table
-        inspector = inspect(self.engine)
-        has_table = inspector.has_table(table_name)
-        return has_table
+        if table_name in self.existing_tables:
+            return True
+        else:
+            # We can use the SQLAlchemy Inspector to check for the table
+            inspector = inspect(self.engine)
+            has_table = inspector.has_table(table_name)
+            if has_table:
+                self.existing_tables[table_name] = True
+            return has_table
 
     # Not doing a full table replacement as in CSV DB, since this runs in prod and replacing tables there is a big no-no
     def update_ground_truth(self, df, table_name):
@@ -49,6 +81,8 @@ class PostgresDatabase(Database):
             raise
 
     def get_table(self, table_name):
-        with self.engine.connect() as connection:
-            query = f"SELECT * FROM {table_name};"
-            return pd.read_sql_query(sql=query, con=connection)
+        metadata = MetaData()
+        table = Table(table_name, metadata, autoload_with=self.engine)
+        stmt = select(table)
+        with self.engine.connect() as conn:
+            return pd.read_sql(stmt, conn)
