@@ -62,7 +62,7 @@ class PostgresDatabase(Database):
         table = Table(table_name, metadata, autoload_with=self.engine)
 
         rows = df.to_dict(orient='records')
-        unique_constraint_column = 'paramount__recording_id'
+        unique_constraint_column = 'paramount__recording_id'  # Must pre-exist as primary key for this to work?
 
         upsert_stmt = pg_insert(table).on_conflict_do_update(  # Bulk update, overwrites old cells on conflict
             index_elements=[unique_constraint_column],

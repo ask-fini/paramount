@@ -40,6 +40,8 @@ def serialize_response(response):
     """Attempt to serialize response to a more JSON-friendly format."""
     if isinstance(response, tuple):
         return tuple(serialize_item(item) for item in response)  # Handle each tuple item.
+    elif callable(response):  # Check if it is a generator function, eg. LLM streaming is on (with SSE)
+        return False
     else:
         return serialize_item(response)
 
@@ -67,7 +69,10 @@ def record(flask_app):
 
             # Serialize the result and return as JSON
             serialized_result = serialize_response(result)
-            return jsonify(serialized_result)
+            if serialized_result:
+                return jsonify(serialized_result)
+            else:
+                return jsonify({'Error': 'Streaming/SSE unsupported'}), 501  # SSE / streaming unsupported
 
         def wrapper(*args, **kwargs):
             func_params = inspect.signature(func).parameters
@@ -87,6 +92,10 @@ def record(flask_app):
             end_time = time()
 
             serialized_result = serialize_response(result)
+
+            if not serialized_result:
+                # in the future, to support SSE/streaming, can intercept here and pick out metadata / answer upon finish
+                return result  # SSE / streaming unsupported, forwarding the raw streamer
 
             # Get current UTC timestamp
             timestamp_now = datetime.now(pytz.timezone('UTC')).replace(microsecond=0).isoformat()
