@@ -12,7 +12,7 @@ database_type = 'csv' if env_db_key not in os.environ else os.getenv(env_db_key)
 # Abstraction for Database with a generic method
 class Database(ABC):
     @abstractmethod
-    def create_or_append(self, dataframe, table_name):
+    def create_or_append(self, dataframe, table_name, primary_key):
         pass
 
     @abstractmethod
@@ -24,7 +24,7 @@ class Database(ABC):
         pass
 
     @abstractmethod
-    def get_table(self, table_name):
+    def get_table(self, table_name, records_data):
         pass
 
 

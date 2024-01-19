@@ -24,7 +24,7 @@ def run():
     ground_truth_table_name = 'paramount_data'
 
     if db_instance.table_exists(ground_truth_table_name):
-        read_df = db_instance.get_table(ground_truth_table_name)
+        read_df = db_instance.get_table(ground_truth_table_name, records_data=True)
         possible_cols = read_df.columns
 
         input_cols = [col for col in possible_cols if col.startswith("input_")]
@@ -108,16 +108,11 @@ def run():
                     'session_all_possible_cols': list(possible_cols)
                 }
 
-                # full_df['paramount__recording_id'] = full_df['paramount__recording_id'].astype(
-                # 'object')  # Or Train.py merge fails
-
                 # Including selected_output_cols in the merge, in order to include any UI edits done for the outputs
                 merged = pd.merge(full_df[['paramount__ground_truth', 'paramount__ground_truth_boolean',
                                            'paramount__recording_id']+selected_output_cols],
                                   read_df.drop(columns=['paramount__ground_truth']+selected_output_cols,
                                                errors='ignore'), on='paramount__recording_id', how='right')
-
-                st.dataframe(merged)
 
                 # To not mess up the order of output cols
                 merged = merged.reindex(columns=['paramount__ground_truth_boolean'] + read_df.columns.tolist())
@@ -132,7 +127,7 @@ def run():
 
                 db_instance.update_ground_truth(merged, ground_truth_table_name)
                 session_table_name = 'paramount_ground_truth_sessions'
-                db_instance.create_or_append(pd.DataFrame([session_df]), session_table_name)
+                db_instance.create_or_append(pd.DataFrame([session_df]), session_table_name, 'session_id')
 
                 st.session_state['full_df'] = full_df
                 st.session_state['random_suggested_name'] = random_suggested_name()

@@ -2,7 +2,7 @@ import os
 import pandas as pd
 from .db import Database
 import traceback
-from sqlalchemy import create_engine, inspect, Table, MetaData, select
+from sqlalchemy import create_engine, inspect, Table, MetaData, select, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID, TEXT, insert as pg_insert
 from sqlalchemy.exc import SQLAlchemyError
 from dotenv import load_dotenv, find_dotenv
@@ -16,11 +16,10 @@ class PostgresDatabase(Database):
         self.engine = create_engine(os.getenv('PARAMOUNT_POSTGRES_CONNECTION_STRING'))
         self.existing_tables = {}
 
-    def create_or_append(self, dataframe, table_name):
+    def create_or_append(self, dataframe, table_name, primary_key):
         # Make a copy of the DataFrame to avoid modifying the original
         df_copy = dataframe.copy()
         dtype = {}
-
         for col in df_copy.columns:
             # Get the first non-null element in the column
             first_non_null = df_copy[col].dropna().iloc[0] if not df_copy[col].dropna().empty else None
@@ -32,13 +31,21 @@ class PostgresDatabase(Database):
                 elif isinstance(first_non_null, (list, dict)):
                     dtype[col] = JSONB
 
-        cols = ['paramount__recording_id'] + df_copy.columns.drop('paramount__recording_id', errors='ignore').tolist()
+        cols = [primary_key] + df_copy.columns.drop(primary_key, errors='ignore').tolist()
         df_copy = df_copy[cols]
-        df_copy.set_index('paramount__recording_id', inplace=True)
-        dtype['paramount__recording_id'] = UUID
+        df_copy.set_index(primary_key, inplace=True)
+        dtype[primary_key] = UUID
 
         try:  # Try to append the copy of the DataFrame to the SQL table, handle potential SQL errors
+            newly_created = not self.table_exists(table_name)
             df_copy.to_sql(table_name, self.engine, if_exists='append', dtype=dtype, index=True)
+
+            if newly_created:
+                print(f"detected newly created table, creating primary key {primary_key}")
+                with self.engine.begin() as conn:
+                    sql = text(f'ALTER TABLE {table_name} ADD PRIMARY KEY ({primary_key})')
+                    conn.execute(sql)
+
             print(f"Data appended to {table_name} successfully.")
         except SQLAlchemyError as e:
             err_tcb = traceback.format_exc()
@@ -81,13 +88,14 @@ class PostgresDatabase(Database):
             print(f"{e}: {err_tcb}")
             raise
 
-    def get_table(self, table_name):
+    def get_table(self, table_name, records_data):
         metadata = MetaData()
         table = Table(table_name, metadata, autoload_with=self.engine)
         stmt = select(table)
         with self.engine.connect() as conn:
             df = pd.read_sql(stmt, conn)
-            df['paramount__ground_truth'] = df['paramount__ground_truth'].replace("", None)
+            if records_data:
+                df['paramount__ground_truth'] = df['paramount__ground_truth'].replace("", None)
 
             # Convert UUID cols to str so Train.py merged df has a successful right join on 'paramount__record_id'
             uuid_cols = [
