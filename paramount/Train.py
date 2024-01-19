@@ -108,11 +108,16 @@ def run():
                     'session_all_possible_cols': list(possible_cols)
                 }
 
+                # full_df['paramount__recording_id'] = full_df['paramount__recording_id'].astype(
+                # 'object')  # Or Train.py merge fails
+
                 # Including selected_output_cols in the merge, in order to include any UI edits done for the outputs
                 merged = pd.merge(full_df[['paramount__ground_truth', 'paramount__ground_truth_boolean',
                                            'paramount__recording_id']+selected_output_cols],
                                   read_df.drop(columns=['paramount__ground_truth']+selected_output_cols,
                                                errors='ignore'), on='paramount__recording_id', how='right')
+
+                st.dataframe(merged)
 
                 # To not mess up the order of output cols
                 merged = merged.reindex(columns=['paramount__ground_truth_boolean'] + read_df.columns.tolist())

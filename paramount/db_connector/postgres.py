@@ -2,10 +2,11 @@ import os
 import pandas as pd
 from .db import Database
 import traceback
-from sqlalchemy import create_engine, inspect, insert, Table, MetaData, select
-from sqlalchemy.dialects.postgresql import JSONB, UUID, TEXT
+from sqlalchemy import create_engine, inspect, Table, MetaData, select
+from sqlalchemy.dialects.postgresql import JSONB, UUID, TEXT, insert as pg_insert
 from sqlalchemy.exc import SQLAlchemyError
 from dotenv import load_dotenv, find_dotenv
+import uuid
 if find_dotenv():
     load_dotenv()
 
@@ -31,7 +32,7 @@ class PostgresDatabase(Database):
                 elif isinstance(first_non_null, (list, dict)):
                     dtype[col] = JSONB
 
-        cols = ['paramount__recording_id'] + df_copy.columns.drop('paramount__recording_id').tolist()
+        cols = ['paramount__recording_id'] + df_copy.columns.drop('paramount__recording_id', errors='ignore').tolist()
         df_copy = df_copy[cols]
         df_copy.set_index('paramount__recording_id', inplace=True)
         dtype['paramount__recording_id'] = UUID
@@ -63,10 +64,10 @@ class PostgresDatabase(Database):
         rows = df.to_dict(orient='records')
         unique_constraint_column = 'paramount__recording_id'
 
-        upsert_stmt = insert(table).on_conflict_do_update(  # Bulk update, overwrites old cells on conflict
+        upsert_stmt = pg_insert(table).on_conflict_do_update(  # Bulk update, overwrites old cells on conflict
             index_elements=[unique_constraint_column],
             set_={
-                c.name: insert(table).excluded[c.name]
+                c.name: pg_insert(table).excluded[c.name]
                 for c in table.c
                 if c.name != unique_constraint_column
             }
@@ -85,4 +86,20 @@ class PostgresDatabase(Database):
         table = Table(table_name, metadata, autoload_with=self.engine)
         stmt = select(table)
         with self.engine.connect() as conn:
-            return pd.read_sql(stmt, conn)
+            df = pd.read_sql(stmt, conn)
+            df['paramount__ground_truth'] = df['paramount__ground_truth'].replace("", None)
+
+            # Convert UUID cols to str so Train.py merged df has a successful right join on 'paramount__record_id'
+            uuid_cols = [
+                col for col in df.columns
+                if df[col].dtype == 'object'
+                and not df[col].dropna().empty  # Ensure non-empty
+                and isinstance(df[col].dropna().iloc[0], uuid.UUID)  # Check for UUID type
+            ]
+            df[uuid_cols] = df[uuid_cols].astype(str)
+
+            for col in df.columns:
+                if df[col].apply(lambda x: isinstance(x, list)).any():
+                    # If any element within the column is a list, convert the whole column
+                    df[col] = df[col].astype(str)
+            return df

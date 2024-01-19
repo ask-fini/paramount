@@ -230,7 +230,6 @@ if db_instance.table_exists(sessions_table):
     # LLM similarity
     # Evaluation pre-fill
     # Save evals
-    # Save to postgres. One table per function? then "function name" col is redundant
     # There is still a test-session-overwrite bug. happens when switching btw Train/Test page and recording new session
 
 else:
