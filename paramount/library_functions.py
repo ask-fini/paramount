@@ -3,6 +3,7 @@ from importlib.resources import read_text
 import random
 import pandas as pd
 from .db_connector import db
+import uuid
 
 
 @st.cache_data
@@ -23,6 +24,45 @@ def large_centered_button(text, on_click=None, args=None):
     st.markdown("<style>div.row-widget.stButton { display: flex; justify-content: center; }</style>",
                 unsafe_allow_html=True)
     return st.button(text, on_click=on_click, args=args)
+
+
+def uuid_sidebar():
+    def change_default(cid):
+        for item in st.session_state:  # Reset the state of the pages, as a cleanup now that identifier is changed
+            st.session_state.pop(item, None)
+
+        st.session_state['user_identifier'] = cid
+
+    user_identifier = ""
+    if 'user_identifier' in st.session_state:
+        user_identifier = st.session_state['user_identifier']
+
+    user_identifier = st.sidebar.text_input("Enter Identifier", value=user_identifier, on_change=change_default,
+                                         args=(user_identifier,))
+
+    if 'user_identifier' in st.session_state:
+        st.session_state['user_identifier'] = user_identifier
+
+
+def is_valid_uuidv4(uuid_to_test):
+    try:
+        # Try converting string to UUID object
+        uuid_obj = uuid.UUID(uuid_to_test, version=4)
+
+        # Check if generated UUID matches the supplied string
+        # and that the version is 4
+        return str(uuid_obj) == uuid_to_test and uuid_obj.version == 4
+    except (ValueError, AttributeError, TypeError):
+        return False
+
+
+def validate_allowed():
+    allowed = False
+    if 'user_identifier' in st.session_state and is_valid_uuidv4(st.session_state['user_identifier']):
+        allowed = True
+    else:
+        st.write("Please enter a correct identifier to access the service")
+    return allowed
 
 
 def center_metric():

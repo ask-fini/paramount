@@ -86,10 +86,14 @@ class PostgresDatabase(Database):
             print(f"{e}: {err_tcb}")
             raise
 
-    def get_table(self, table_name, records_data):
+    def get_table(self, table_name, records_data, identifier_column_name, identifier_value):
         metadata = MetaData()
         table = Table(table_name, metadata, autoload_with=self.engine)
-        stmt = select(table)
+
+        identifier_column = table.c[identifier_column_name]  # Get the column to filter on
+
+        # Prepare the select statement with a where clause
+        stmt = select(table).where(identifier_column == identifier_value)  # SQLAlchemy overloads == operator to run it
         with self.engine.connect() as conn:
             df = pd.read_sql(stmt, conn)
             if records_data:

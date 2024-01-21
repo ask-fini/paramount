@@ -7,6 +7,8 @@ from paramount.library_functions import (
     hide_buttons,
     center_metric,
     db_connection,
+    uuid_sidebar,
+    validate_allowed,
 )
 import os
 import ast
@@ -15,6 +17,8 @@ from dotenv import load_dotenv, find_dotenv
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 db_instance = db_connection()
+uuid_sidebar()
+paramount_identifier_colname = os.getenv('PARAMOUNT_IDENTIFIER_COLNAME')
 
 
 def get_values_dict(col_prefix, row):
@@ -58,179 +62,193 @@ def invoke_via_api(func_name, base_url, args=None, kwargs=None):
     return response
 
 
-hide_buttons()
-st.title("Test tweaks and accuracy")
-if find_dotenv():
-    load_dotenv()
-base_url = os.getenv('FUNCTION_API_BASE_URL')
-sessions_table = 'paramount_ground_truth_sessions'
+def run():
+    hide_buttons()
+    if not validate_allowed():
+        return
+    st.title("Test tweaks and accuracy")
+    if find_dotenv():
+        load_dotenv()
+    base_url = os.getenv('FUNCTION_API_BASE_URL')
+    sessions_table = 'paramount_ground_truth_sessions'
 
-inits = ['clicked_eval']
-for var in inits:
-    if var not in st.session_state:
-        st.session_state[var] = False
+    inits = ['clicked_eval']
+    for var in inits:
+        if var not in st.session_state:
+            st.session_state[var] = False
+
+    def clicked(var, value):
+        st.session_state[var] = value
+
+    if db_instance.table_exists(sessions_table):
+        sessions = db_instance.get_table(sessions_table, records_data=False,
+                                         identifier_value=st.session_state['user_identifier'],
+                                         identifier_column_name='session_user_identifier')
+        sessions['session_time'] = pd.to_datetime(sessions['session_time'])
+        timestr = sessions.sort_values('session_time')['session_time'].dt.strftime('%Y-%m-%d %H:%M:%S')
+        namestr = sessions.sort_values('session_time')['session_name']
+        available_sessions = timestr + ': ' + namestr
+
+        session_to_index = pd.Series(sessions.sort_values('session_time').index, index=available_sessions)
+
+        # User selects a session from Streamlit's selectbox
+        selected_session = st.selectbox("Select a ground truth session", available_sessions)
+
+        if selected_session:
+            # Retrieve the index of the selected session
+            session_index = session_to_index[selected_session]
+            # Retrieve the full row corresponding to the selected session
+            session = sessions.loc[session_index]
+            session = session.copy()  # to avoid SettingWithCopyWarning in our invocation of ast.literal_eval
+
+            records_table_name = 'paramount_data'
+            full_df = db_instance.get_table(records_table_name, records_data=True,
+                                            identifier_value=st.session_state['user_identifier'],
+                                            identifier_column_name=paramount_identifier_colname)
+
+            # TODO: These two operations may be very inefficient for large amount of rows?
+            full_df['paramount__ground_truth'] = full_df['paramount__ground_truth'].apply(
+                lambda x: ast.literal_eval(x)
+                if isinstance(x, str) and x.strip().startswith('[') and x.strip().endswith(']') else [])
+            session_df = full_df[full_df['paramount__ground_truth'].apply(lambda ids: session['session_id'] in ids)]
+
+            editable_columns = []
+
+            filtered_cols = session['session_all_filtered_cols']
+
+            colnames_cols = ['session_id_cols', 'session_input_cols', 'session_output_cols',
+                             'session_all_filtered_cols', 'session_all_possible_cols']
+
+            # Convert the column lists from strings back to their actual list format
+            for df_column_list in colnames_cols:
+                session[df_column_list] = ast.literal_eval(session[df_column_list])
+
+            disabled_cols = set([col for col in full_df.columns if col not in editable_columns])
+            column_config = {col: format_func(col) for col in session_df.columns}
+            to_update = {column: None for column in session['session_all_possible_cols'] if column not in filtered_cols}
+            to_update['paramount__ground_truth'] = None
+
+            column_config.update(to_update)
+
+            df = st.data_editor(data=color_columns(session_df), column_config=column_config, use_container_width=True,
+                                disabled=disabled_cols, hide_index=True)
+
+            selected_input_var = st.selectbox("Select an input param to vary", session['session_input_cols'],
+                                              format_func=format_func)
+
+            if selected_input_var:
+                most_common_input_content = session_df[selected_input_var].mode()
+                first_mode_value = most_common_input_content.iloc[0] if not most_common_input_content.empty else None
+                edited_var = st.text_area("Most common value", first_mode_value)
+                if edited_var:
+                    test_set = session_df.copy()
+                    test_set[selected_input_var] = edited_var
+
+                    selected_output_var = st.selectbox(
+                        "Select an output param to measure similarity: ground truth <> test set",
+                        session['session_output_cols'], format_func=format_func)
+
+                    large_centered_button("Test against ground truth", clicked, args=('clicked_eval', True))
+                    if st.session_state['clicked_eval'] and selected_output_var:
+                        session_output_cols = list(session['session_output_cols'])
+                        cols_to_display = session_output_cols + ['test_' + item for item in session_output_cols]
+
+                        # Now decide what DataFrame to use for the data_editor based on session state
+                        if 'clean_test_set' in st.session_state:
+                            clean_test_set = st.session_state['clean_test_set']
+                        else:
+                            clean_test_set = test_set.applymap(clean_and_parse)
+                            progress_bar = st.progress(0, "Running against ground truth")
+                            total_length = len(clean_test_set)
+                            for i, (index, row) in enumerate(clean_test_set.iterrows()):
+                                args = get_values_dict('input_args__', row)
+                                kwargs = get_values_dict('input_kwargs__', row)
+                                func_dict = {'args': args, 'kwargs': kwargs}
+
+                                result = invoke_via_api(base_url=base_url, func_name=row['paramount__function_name'],
+                                                        args=args, kwargs=kwargs)
+                                progress_bar.progress((i + 1) / total_length, "Running against ground truth")
+                                for output_col in session_output_cols:
+                                    # Match function outputs to column names
+                                    identifying_info = output_col.split('__')[1].split('_')
+                                    output_index = int(identifying_info[0])-1
+                                    output_colname = None if len(identifying_info) < 2 else\
+                                        "_".join(identifying_info[1:])
+                                    data_item = result[output_index] if not output_colname else\
+                                        result[output_index][output_colname]
+                                    clean_test_set.at[index, 'test_'+output_col] = str(data_item)
+
+                            progress_bar.empty()
+                            clean_test_set = clean_test_set[cols_to_display]
+
+                            vectorizer = TfidfVectorizer()
+
+                            # To ensure comparability
+                            clean_test_set[selected_output_var] = clean_test_set[selected_output_var].astype(str)
+                            clean_test_set['test_' + selected_output_var] =\
+                                clean_test_set['test_' + selected_output_var].astype(str)
+
+                            tfidf_matrix = vectorizer.fit_transform(clean_test_set[selected_output_var])
+
+                            # Transform both the ground truth and test set data (columns 1 and 2)
+                            tfidf_matrix_ground_truth = vectorizer.transform(clean_test_set[selected_output_var])
+                            tfidf_matrix_test_set = vectorizer.transform(clean_test_set['test_'+selected_output_var])
+
+                            # Calculate cosine similarity between the corresponding rows in columns 1 and 2
+                            cosine_similarities = [cosine_similarity(tfidf_matrix_ground_truth[i:i + 1],
+                                                                     tfidf_matrix_test_set[i:i + 1])[0][0]
+                                                   for i in range(tfidf_matrix_ground_truth.shape[0])]
+
+                            # Add the cosine similarity scores to the DataFrame
+                            clean_test_set['cosine_similarity'] = cosine_similarities
+                            clean_test_set['cosine_similarity'] *= 100  # For percent display
+
+                        test_col_config = {col: format_func(col) for col in clean_test_set.columns}
+                        clean_test_set['evaluation'] = None
+                        test_col_config['evaluation'] = st.column_config.SelectboxColumn(
+                            "Evaluation",
+                            help="Evaluation of test run",
+                            width="medium",
+                            options=[
+                                "✅ Accurate",
+                                "❔ Missing Info",  # RAG failed or Document missing
+                                "❌ Irrelevant Extra Info",  # RAG failed, included too much
+                                "🕰️ Wrong/Outdated Info",  # Document needs updating
+                                "📃 Didn't follow instruction"  # Prompt was wrong
+                            ],
+                            required=True,
+                        )
+
+                        test_col_config['cosine_similarity'] = st.column_config.ProgressColumn(
+                            "Similarity",
+                            help="Cosine similarity versus ground truth",
+                            format="%.1f%%",
+                            min_value=0,
+                            max_value=100,
+                        )
+
+                        st.data_editor(data=color_columns(clean_test_set, False),
+                                       column_config=test_col_config, use_container_width=True, on_change=clicked,
+                                       args=('clean_test_set', clean_test_set), disabled=cols_to_display,
+                                       hide_index=True)
+
+                        average_similarity = clean_test_set['cosine_similarity'].mean()
+                        formatted_average_similarity = "{:.2f}%".format(average_similarity)
+                        center_metric()
+                        st.metric(label="Average similarity to ground truth", value=formatted_average_similarity)
+
+                        st.session_state['clicked_eval'] = False
+
+        # LATER
+        # Fix Large nr of rows TODO
+        # LLM similarity
+        # Evaluation pre-fill
+        # Save evals
+        # test-session-overwrite bug still exists, happens when switching btw Train/Test page and recording new session
+
+    else:
+        st.write("No sessions found. Ensure you have recorded data, and that you have a saved ground truth session.")
 
 
-def clicked(var, value):
-    st.session_state[var] = value
-
-
-if db_instance.table_exists(sessions_table):
-    sessions = db_instance.get_table(sessions_table, records_data=False)
-    sessions['session_time'] = pd.to_datetime(sessions['session_time'])
-    timestr = sessions.sort_values('session_time')['session_time'].dt.strftime('%Y-%m-%d %H:%M:%S')
-    namestr = sessions.sort_values('session_time')['session_name']
-    available_sessions = timestr + ': ' + namestr
-
-    session_to_index = pd.Series(sessions.sort_values('session_time').index, index=available_sessions)
-
-    # User selects a session from Streamlit's selectbox
-    selected_session = st.selectbox("Select a ground truth session", available_sessions)
-
-    if selected_session:
-        # Retrieve the index of the selected session
-        session_index = session_to_index[selected_session]
-        # Retrieve the full row corresponding to the selected session
-        session = sessions.loc[session_index]
-        session = session.copy()  # to avoid SettingWithCopyWarning in our invocation of ast.literal_eval
-
-        records_table_name = 'paramount_data'
-        full_df = db_instance.get_table(records_table_name, records_data=True)
-
-        # TODO: These two operations may be very inefficient for large amount of rows?
-        full_df['paramount__ground_truth'] = full_df['paramount__ground_truth'].apply(
-            lambda x: ast.literal_eval(x) if isinstance(x, str) and x.strip().startswith('[') and x.strip().endswith(
-                ']') else [])
-        session_df = full_df[full_df['paramount__ground_truth'].apply(lambda ids: session['session_id'] in ids)]
-
-        editable_columns = []
-
-        filtered_cols = session['session_all_filtered_cols']
-
-        colnames_cols = ['session_id_cols', 'session_input_cols', 'session_output_cols', 'session_all_filtered_cols',
-                         'session_all_possible_cols']
-
-        # Convert the column lists from strings back to their actual list format
-        for df_column_list in colnames_cols:
-            session[df_column_list] = ast.literal_eval(session[df_column_list])
-
-        disabled_cols = set([col for col in full_df.columns if col not in editable_columns])
-        column_config = {col: format_func(col) for col in session_df.columns}
-        to_update = {column: None for column in session['session_all_possible_cols'] if column not in filtered_cols}
-        to_update['paramount__ground_truth'] = None
-
-        column_config.update(to_update)
-
-        df = st.data_editor(data=color_columns(session_df), column_config=column_config, use_container_width=True,
-                            disabled=disabled_cols, hide_index=True)
-
-        selected_input_var = st.selectbox("Select an input param to vary", session['session_input_cols'],
-                                          format_func=format_func)
-
-        if selected_input_var:
-            most_common_input_content = session_df[selected_input_var].mode()
-            first_mode_value = most_common_input_content.iloc[0] if not most_common_input_content.empty else None
-            edited_var = st.text_area("Most common value", first_mode_value)
-            if edited_var:
-                test_set = session_df.copy()
-                test_set[selected_input_var] = edited_var
-
-                selected_output_var = st.selectbox(
-                    "Select an output param to measure similarity: ground truth <> test set",
-                    session['session_output_cols'], format_func=format_func)
-
-                large_centered_button("Test against ground truth", clicked, args=('clicked_eval', True))
-                if st.session_state['clicked_eval'] and selected_output_var:
-                    session_output_cols = list(session['session_output_cols'])
-                    cols_to_display = session_output_cols + ['test_' + item for item in session_output_cols]
-
-                    # Now decide what DataFrame to use for the data_editor based on session state
-                    if 'clean_test_set' in st.session_state:
-                        clean_test_set = st.session_state['clean_test_set']
-                    else:
-                        clean_test_set = test_set.applymap(clean_and_parse)
-                        progress_bar = st.progress(0, "Running against ground truth")
-                        total_length = len(clean_test_set)
-                        for i, (index, row) in enumerate(clean_test_set.iterrows()):
-                            args = get_values_dict('input_args__', row)
-                            kwargs = get_values_dict('input_kwargs__', row)
-                            func_dict = {'args': args, 'kwargs': kwargs}
-
-                            result = invoke_via_api(base_url=base_url, func_name=row['paramount__function_name'],
-                                                    args=args, kwargs=kwargs)
-                            progress_bar.progress((i + 1) / total_length, "Running against ground truth")
-                            for output_col in session_output_cols:
-                                # Match function outputs to column names
-                                identifying_info = output_col.split('__')[1].split('_')
-                                output_index = int(identifying_info[0])-1
-                                output_colname = None if len(identifying_info) < 2 else "_".join(identifying_info[1:])
-                                data_item = result[output_index] if not output_colname else result[output_index][output_colname]
-                                clean_test_set.at[index, 'test_'+output_col] = str(data_item)
-
-                        progress_bar.empty()
-                        clean_test_set = clean_test_set[cols_to_display]
-
-                        vectorizer = TfidfVectorizer()
-
-                        # To ensure comparability
-                        clean_test_set[selected_output_var] = clean_test_set[selected_output_var].astype(str)
-                        clean_test_set['test_' + selected_output_var] = clean_test_set['test_' + selected_output_var].astype(str)
-
-                        tfidf_matrix = vectorizer.fit_transform(clean_test_set[selected_output_var])
-
-                        # Transform both the ground truth and test set data (columns 1 and 2)
-                        tfidf_matrix_ground_truth = vectorizer.transform(clean_test_set[selected_output_var])
-                        tfidf_matrix_test_set = vectorizer.transform(clean_test_set['test_'+selected_output_var])
-
-                        # Calculate cosine similarity between the corresponding rows in columns 1 and 2
-                        cosine_similarities = [cosine_similarity(tfidf_matrix_ground_truth[i:i + 1], tfidf_matrix_test_set[i:i + 1])[0][0]
-                                               for i in range(tfidf_matrix_ground_truth.shape[0])]
-
-                        # Add the cosine similarity scores to the DataFrame
-                        clean_test_set['cosine_similarity'] = cosine_similarities
-                        clean_test_set['cosine_similarity'] *= 100  # For percent display
-
-                    test_col_config = {col: format_func(col) for col in clean_test_set.columns}
-                    clean_test_set['evaluation'] = None
-                    test_col_config['evaluation'] = st.column_config.SelectboxColumn(
-                        "Evaluation",
-                        help="Evaluation of test run",
-                        width="medium",
-                        options=[
-                            "✅ Accurate",
-                            "❔ Missing Info",  # RAG failed or Document missing
-                            "❌ Irrelevant Extra Info",  # RAG failed, included too much
-                            "🕰️ Wrong/Outdated Info",  # Document needs updating
-                            "📃 Didn't follow instruction"  # Prompt was wrong
-                        ],
-                        required=True,
-                    )
-
-                    test_col_config['cosine_similarity'] = st.column_config.ProgressColumn(
-                        "Similarity",
-                        help="Cosine similarity versus ground truth",
-                        format="%.1f%%",
-                        min_value=0,
-                        max_value=100,
-                    )
-
-                    st.data_editor(data=color_columns(clean_test_set, False),
-                                   column_config=test_col_config, use_container_width=True, on_change=clicked,
-                                   args=('clean_test_set', clean_test_set), disabled=cols_to_display, hide_index=True)
-
-                    average_similarity = clean_test_set['cosine_similarity'].mean()
-                    formatted_average_similarity = "{:.2f}%".format(average_similarity)
-                    center_metric()
-                    st.metric(label="Average similarity to ground truth", value=formatted_average_similarity)
-
-                    st.session_state['clicked_eval'] = False
-
-    # LATER
-    # Fix Large nr of rows TODO
-    # LLM similarity
-    # Evaluation pre-fill
-    # Save evals
-    # There is still a test-session-overwrite bug. happens when switching btw Train/Test page and recording new session
-
-else:
-    st.write("No sessions found. Ensure you have recorded data, and that you have a saved ground truth session.")
+if __name__ == '__main__':
+    run()

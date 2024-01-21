@@ -24,7 +24,7 @@ class Database(ABC):
         pass
 
     @abstractmethod
-    def get_table(self, table_name, records_data):
+    def get_table(self, table_name, records_data, identifier_column_name, identifier_value):
         pass
 
 

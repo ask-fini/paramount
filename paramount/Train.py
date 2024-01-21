@@ -3,6 +3,7 @@ import streamlit as st
 import uuid
 import pytz
 import ast
+import os
 from datetime import datetime
 from paramount.library_functions import (
     hide_buttons,
@@ -12,19 +13,30 @@ from paramount.library_functions import (
     format_func,
     large_centered_button,
     db_connection,
+    uuid_sidebar,
+    validate_allowed,
 )
+from dotenv import load_dotenv, find_dotenv
+if find_dotenv():
+    load_dotenv()
 st.set_page_config(layout="wide")
 db_instance = db_connection()
+uuid_sidebar()
+paramount_identifier_colname = os.getenv('PARAMOUNT_IDENTIFIER_COLNAME')
 
 
 def run():
     hide_buttons()
-    st.title('Record ground truth data')
+    if not validate_allowed():
+        return
 
+    st.title('Record ground truth data')
     ground_truth_table_name = 'paramount_data'
 
     if db_instance.table_exists(ground_truth_table_name):
-        read_df = db_instance.get_table(ground_truth_table_name, records_data=True)
+        read_df = db_instance.get_table(ground_truth_table_name, records_data=True,
+                                        identifier_value=st.session_state['user_identifier'],
+                                        identifier_column_name=paramount_identifier_colname)
         possible_cols = read_df.columns
 
         input_cols = [col for col in possible_cols if col.startswith("input_")]
@@ -105,7 +117,8 @@ def run():
                     'session_input_cols': list(selected_input_cols),
                     'session_output_cols': list(selected_output_cols),
                     'session_all_filtered_cols': list(filtered_cols),
-                    'session_all_possible_cols': list(possible_cols)
+                    'session_all_possible_cols': list(possible_cols),
+                    'session_user_identifier': st.session_state['user_identifier'],
                 }
 
                 # Including selected_output_cols in the merge, in order to include any UI edits done for the outputs

@@ -19,5 +19,5 @@ class CSVDatabase(Database):
     def update_ground_truth(self, df, table_name):
         df.to_csv(table_name+'.csv', index=False)
 
-    def get_table(self, table_name, records_data=None):
+    def get_table(self, table_name, records_data=None, identifier_column_name=None, identifier_value=None):
         return pd.read_csv(table_name+'.csv')
