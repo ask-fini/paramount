@@ -106,7 +106,7 @@ def run():
             st.session_state['random_suggested_name'] = random_suggested_name()
 
         session_name = st.text_input("Session name (optional)", value=st.session_state['random_suggested_name'])
-        if selection_made:
+        if selection_made and len(full_df) > 0:
             if large_centered_button("Save session"):
                 session_id = str(uuid.uuid4())
                 session_df = {

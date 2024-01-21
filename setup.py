@@ -8,7 +8,7 @@ with open(os.path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 setup(
    name='paramount',
-   version='0.1.2',
+   version='0.1.3',
    description='Agent-Centric Evals for LLMs',
    long_description=long_description,
    long_description_content_type='text/markdown',
