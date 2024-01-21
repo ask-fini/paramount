@@ -5,11 +5,13 @@ from datetime import datetime
 import pytz
 from time import time
 import uuid
+import traceback
 from flask import request, jsonify
 from .db_connector import db
 from dotenv import load_dotenv, find_dotenv
 if find_dotenv():
     load_dotenv()
+import threading
 
 
 def is_jsonable(x):
@@ -75,51 +77,63 @@ def record(flask_app):
                 return jsonify({'Error': 'Streaming/SSE unsupported'}), 501  # SSE / streaming unsupported
 
         def wrapper(*args, **kwargs):
-            func_params = inspect.signature(func).parameters
-            args_names = list(func_params.keys())
+            try:
+                func_params = inspect.signature(func).parameters
+                args_names = list(func_params.keys())
 
-            # Create a dictionary for positional arguments with the prefix 'args_'
-            prefixed_args = {'args__' + key: value for key, value in zip(args_names[:len(args)], args)}
+                # Create a dictionary for positional arguments with the prefix 'args_'
+                prefixed_args = {'args__' + key: value for key, value in zip(args_names[:len(args)], args)}
 
-            # Create a dictionary for keyword arguments with the prefix 'kwargs_'
-            prefixed_kwargs = {'kwargs__' + key: value for key, value in kwargs.items()}
+                # Create a dictionary for keyword arguments with the prefix 'kwargs_'
+                prefixed_kwargs = {'kwargs__' + key: value for key, value in kwargs.items()}
 
-            # Merge the two dictionaries
-            args_dict = {**prefixed_args, **prefixed_kwargs}
+                # Merge the two dictionaries
+                args_dict = {**prefixed_args, **prefixed_kwargs}
 
-            start_time = time()
-            result = func(*args, **kwargs)
-            end_time = time()
+                start_time = time()
+                result = func(*args, **kwargs)
+                end_time = time()
+            except Exception as e:
+                err_tcb = traceback.format_exc()
+                print(f"PARAMOUNT: An error occurred while invoking {func.__name__}: {e}: {err_tcb}")
+                raise  # Re-raise the exception for further handling if necessary
 
-            serialized_result = serialize_response(result)
+            try:
+                serialized_result = serialize_response(result)
 
-            if not serialized_result:
-                # in the future, to support SSE/streaming, can intercept here and pick out metadata / answer upon finish
-                return result  # SSE / streaming unsupported, forwarding the raw streamer
+                if not serialized_result:
+                    # to support SSE/streaming, can intercept here and pick out metadata / answer upon finish
+                    return result  # SSE / streaming unsupported, forwarding the raw streamer
 
-            # Get current UTC timestamp
-            timestamp_now = datetime.now(pytz.timezone('UTC')).replace(microsecond=0).isoformat()
+                # Get current UTC timestamp
+                timestamp_now = datetime.now(pytz.timezone('UTC')).replace(microsecond=0).isoformat()
 
-            # Update result data dictionary with invocation information
-            # TODO: In future, could measure CPU/MEM usage per invocation. Skipped for now to not add too much overhead
-            # Skipped exception logging since functions may have internal handling which would be difficult to capture
-            result_data = {
-                'paramount__ground_truth': [],
-                'paramount__recording_id': str(uuid.uuid4()),
-                'paramount__timestamp': timestamp_now,
-                'paramount__function_name': func.__name__,
-                'paramount__execution_time': end_time - start_time,
-                **{f'input_{k}': v for k, v in args_dict.items()}}  # Adds "input_*" to column names for differentiation
-            for i, output in enumerate(serialized_result, start=1):
-                if isinstance(output, dict):
-                    for key, value in output.items():
-                        result_data[f'output__{i}_{key}'] = value
-                else:
-                    result_data[f'output__{i}'] = output
-            df = pd.DataFrame([result_data])
-            df['paramount__timestamp'] = pd.to_datetime(df['paramount__timestamp'])
+                # Update result data dictionary with invocation information
+                # TODO: In future, could measure CPU/MEM usage per invocation. Skipped for now to not add overhead
+                # Skipped exception logging since functions may have internal handling which may be difficult to capture
+                result_data = {
+                    'paramount__ground_truth': [],
+                    'paramount__recording_id': str(uuid.uuid4()),
+                    'paramount__timestamp': timestamp_now,
+                    'paramount__function_name': func.__name__,
+                    'paramount__execution_time': end_time - start_time,
+                    **{f'input_{k}': v for k, v in args_dict.items()}}  # Add "input_*" to column names to differentiate
+                for i, output in enumerate(serialized_result, start=1):
+                    if isinstance(output, dict):
+                        for key, value in output.items():
+                            result_data[f'output__{i}_{key}'] = value
+                    else:
+                        result_data[f'output__{i}'] = output
+                df = pd.DataFrame([result_data])
+                df['paramount__timestamp'] = pd.to_datetime(df['paramount__timestamp'])
 
-            db_instance.create_or_append(df, 'paramount_data', 'paramount__recording_id')
+                # Fire and forget for this heavy operation
+                threading.Thread(target=db_instance.create_or_append,
+                                 args=(df, 'paramount_data', 'paramount__recording_id'), daemon=True).start()
+
+            except Exception as e:
+                err_tcb = traceback.format_exc()
+                print(f"PARAMOUNT: Wrapper logic issue: {e}: {err_tcb}")
 
             return result
 

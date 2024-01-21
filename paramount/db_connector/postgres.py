@@ -45,8 +45,6 @@ class PostgresDatabase(Database):
                 with self.engine.begin() as conn:
                     sql = text(f'ALTER TABLE {table_name} ADD PRIMARY KEY ({primary_key})')
                     conn.execute(sql)
-
-            print(f"Data appended to {table_name} successfully.")
         except SQLAlchemyError as e:
             err_tcb = traceback.format_exc()
             print(f"An error occurred while appending to {table_name}: {e}: {err_tcb}")
