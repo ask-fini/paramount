@@ -8,8 +8,8 @@ with open(os.path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 setup(
    name='paramount',
-   version='0.0.7',
-   description='Automated evals for AI support bots',
+   version='0.1.0',
+   description='Agent-Centric Evals for LLMs',
    long_description=long_description,
    long_description_content_type='text/markdown',
    entry_points={
