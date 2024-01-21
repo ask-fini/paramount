@@ -19,7 +19,7 @@ from paramount.library_functions import (
 from dotenv import load_dotenv, find_dotenv
 if find_dotenv():
     load_dotenv()
-st.set_page_config(layout="wide")
+st.set_page_config(layout="wide", page_title="Fini Paramount - Agent-Centric Evals")
 db_instance = db_connection()
 uuid_sidebar()
 paramount_identifier_colname = os.getenv('PARAMOUNT_IDENTIFIER_COLNAME')
