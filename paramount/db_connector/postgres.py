@@ -111,7 +111,7 @@ class PostgresDatabase(Database):
         with self.engine.connect() as conn:
             df = pd.read_sql(stmt, conn)
             if records_data:
-                df['paramount__ground_truth'] = df['paramount__ground_truth'].replace("", None)
+                df['paramount__evaluation'] = df['paramount__evaluation'].replace("", None)
 
             # Convert UUID cols to str so Evaluate.py merged df has a successful right join on 'paramount__record_id'
             uuid_cols = [

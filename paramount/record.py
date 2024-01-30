@@ -112,9 +112,10 @@ def record(flask_app):
                 # TODO: In future, could measure CPU/MEM usage per invocation. Skipped for now to not add overhead
                 # Skipped exception logging since functions may have internal handling which may be difficult to capture
                 result_data = {
-                    'paramount__ground_truth': [],
+                    'paramount__evaluation': "",
                     'paramount__recording_id': str(uuid.uuid4()),
-                    'paramount__timestamp': timestamp_now,
+                    'paramount__recorded_at': timestamp_now,
+                    'paramount__evaluated_at': timestamp_now,
                     'paramount__function_name': func.__name__,
                     'paramount__execution_time': end_time - start_time,
                     **{f'input_{k}': v for k, v in args_dict.items()}}  # Add "input_*" to column names to differentiate
@@ -125,7 +126,7 @@ def record(flask_app):
                     else:
                         result_data[f'output__{i}'] = output
                 df = pd.DataFrame([result_data])
-                df['paramount__timestamp'] = pd.to_datetime(df['paramount__timestamp'])
+                df['paramount__recorded_at'] = pd.to_datetime(df['paramount__recorded_at'])
 
                 # Fire and forget for this heavy operation
                 threading.Thread(target=db_instance.create_or_append,

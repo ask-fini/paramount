@@ -108,10 +108,10 @@ def run():
                                             identifier_column_name=paramount_identifier_colname)
 
             # TODO: These two operations may be very inefficient for large amount of rows?
-            full_df['paramount__ground_truth'] = full_df['paramount__ground_truth'].apply(
+            full_df['paramount__evaluation'] = full_df['paramount__evaluation'].apply(
                 lambda x: ast.literal_eval(x)
                 if isinstance(x, str) and x.strip().startswith('[') and x.strip().endswith(']') else [])
-            session_df = full_df[full_df['paramount__ground_truth'].apply(lambda ids: session['session_id'] in ids)]
+            session_df = full_df[full_df['paramount__evaluation'].apply(lambda ids: session['session_id'] in ids)]
 
             editable_columns = []
 
@@ -127,7 +127,7 @@ def run():
             disabled_cols = set([col for col in full_df.columns if col not in editable_columns])
             column_config = {col: format_func(col) for col in session_df.columns}
             to_update = {column: None for column in session['session_all_possible_cols'] if column not in filtered_cols}
-            to_update['paramount__ground_truth'] = None
+            to_update['paramount__evaluation'] = None
 
             column_config.update(to_update)
 

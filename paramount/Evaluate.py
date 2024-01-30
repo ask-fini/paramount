@@ -1,13 +1,11 @@
 import pandas as pd
 import streamlit as st
-import uuid
-import pytz
 import ast
 import os
+import pytz
 from datetime import datetime
 from paramount.library_functions import (
     hide_buttons,
-    random_suggested_name,
     color_columns,
     get_colors,
     format_func,
@@ -26,6 +24,7 @@ paramount_identifier_colname = os.getenv('PARAMOUNT_IDENTIFIER_COLNAME')
 PARAMOUNT_META_COLS = ast.literal_eval(os.getenv('PARAMOUNT_META_COLS'))
 PARAMOUNT_INPUT_COLS = ast.literal_eval(os.getenv('PARAMOUNT_INPUT_COLS'))
 PARAMOUNT_OUTPUT_COLS = ast.literal_eval(os.getenv('PARAMOUNT_OUTPUT_COLS'))
+eval_col = 'paramount__evaluation'
 
 
 def run():
@@ -42,12 +41,13 @@ def run():
                                         identifier_column_name=paramount_identifier_colname)
         possible_cols = read_df.columns
 
+        read_df[eval_col] = read_df[eval_col].fillna('')
+
         input_cols = [col for col in possible_cols if col.startswith("input_")]
         output_cols = [col for col in possible_cols if col.startswith("output_")]
 
         paramount_suffix = ['recording_id', 'timestamp', 'function_name', 'execution_time']
         paramount_cols = ['paramount__' + suffix for suffix in paramount_suffix]
-        identifier_cols = paramount_cols + input_cols
 
         col_mapping = {'paramount__': paramount_cols, 'input_args__': input_cols,
                        'input_kwargs__': input_cols, 'output__': output_cols}
@@ -69,34 +69,32 @@ def run():
         selected_input_cols = ['input_' + col for col in PARAMOUNT_INPUT_COLS]
         selected_output_cols = ['output__' + col for col in PARAMOUNT_OUTPUT_COLS]
 
-        if not selected_id_cols and not selected_input_cols and not selected_output_cols:
-            filtered_cols = possible_cols
-            selection_made = False
-        else:
-            filtered_cols = ['paramount__ground_truth'] + selected_id_cols + selected_input_cols + selected_output_cols
-            filtered_cols = list(dict.fromkeys(filtered_cols))  # Avoids column name duplication but maintains order
-            selection_made = True
+        filtered_cols = [eval_col] + selected_id_cols + selected_input_cols + selected_output_cols
+        filtered_cols = list(dict.fromkeys(filtered_cols))  # Avoids column name duplication but maintains order
 
         # Now decide what DataFrame to use for the data_editor based on session state
         if 'full_df' in st.session_state:
             full_df = st.session_state['full_df']
         else:
             full_df = read_df.reset_index(drop=True)
-            # Turn session_id into a checkbox in the UI
-            full_df['paramount__ground_truth'] = full_df['paramount__ground_truth'].apply(
-                lambda x: [] if pd.isna(x) else
-                (ast.literal_eval(x) if isinstance(x, str) and x.strip().startswith("[") else [x]))
-            full_df.insert(0, 'paramount__ground_truth_boolean',  # insert at 0 makes it the first column
-                           full_df['paramount__ground_truth'].apply(lambda x: bool(x)))
 
-        disabled_cols = set([col for col in full_df.columns if col not in ["paramount__ground_truth_boolean"] + selected_output_cols])
+        disabled_cols = set([col for col in full_df.columns if col not in [eval_col] + selected_output_cols])
 
         column_config = {col: format_func(col) for col in full_df.columns}
-        column_config['paramount__ground_truth_boolean'] = 'Ground Truth?'
-        column_config['paramount__ground_truth'] = None  # Hides the column
-
-        if selection_made:  # Updates the config for unselected cols to hide them
-            column_config.update({column: None for column in possible_cols if column not in filtered_cols})
+        column_config.update({column: None for column in possible_cols if column not in filtered_cols})
+        full_df[eval_col] = full_df[eval_col].astype(str)
+        column_config[eval_col] = st.column_config.SelectboxColumn(
+            "Evaluation",
+            width="medium",
+            options=[
+                "✅ Accurate",
+                "❔ Missing Info",  # RAG failed or Document missing
+                "❌ Irrelevant Extra Info",  # RAG failed, included too much
+                "🕰️ Wrong/Outdated Info",  # Document needs updating
+                "📃 Didn't follow instruction"  # Prompt was wrong
+            ],
+            required=True
+        )
 
         def on_change(full_df):  # Needed to ensure UI updates are synchronized correctly across ground truth clicks
             st.session_state['full_df'] = full_df
@@ -105,52 +103,22 @@ def run():
                                  use_container_width=True, disabled=disabled_cols, hide_index=True,
                                  on_change=on_change, args=(full_df,))
 
-        if 'random_suggested_name' not in st.session_state:
-            st.session_state['random_suggested_name'] = random_suggested_name()
+        # Update evaluated_at column wherever evaluations have been made (detected via != versus original df)
+        diff_eval_ids = read_df.index[read_df[eval_col] != full_df.loc[read_df.index, eval_col]]
+        current_time_utc = datetime.now(pytz.timezone('UTC')).replace(microsecond=0).isoformat()
+        full_df.loc[diff_eval_ids, 'paramount__evaluated_at'] = current_time_utc
 
-        session_name = st.text_input("Session name (optional)", value=st.session_state['random_suggested_name'])
-        if selection_made and len(full_df) > 0:
+        if len(full_df) > 0:
             if large_centered_button("Save session"):
-                session_id = str(uuid.uuid4())
-                session_df = {
-                    'session_id': session_id,
-                    'session_name': session_name,
-                    'session_time': datetime.now(pytz.timezone('UTC')).replace(microsecond=0).isoformat(),
-                    'session_id_cols': list(selected_id_cols),
-                    'session_input_cols': list(selected_input_cols),
-                    'session_output_cols': list(selected_output_cols),
-                    'session_all_filtered_cols': list(filtered_cols),
-                    'session_all_possible_cols': list(possible_cols),
-                    'session_user_identifier': st.session_state['user_identifier'],
-                }
-
                 # Including selected_output_cols in the merge, in order to include any UI edits done for the outputs
-                merged = pd.merge(full_df[['paramount__ground_truth', 'paramount__ground_truth_boolean',
-                                           'paramount__recording_id']+selected_output_cols],
-                                  read_df.drop(columns=['paramount__ground_truth']+selected_output_cols,
+                merged = pd.merge(full_df[[eval_col, 'paramount__recording_id', 'paramount__evaluated_at']+selected_output_cols],
+                                  read_df.drop(columns=[eval_col, 'paramount__evaluated_at']+selected_output_cols,
                                                errors='ignore'), on='paramount__recording_id', how='right')
 
-                # To not mess up the order of output cols
-                merged = merged.reindex(columns=['paramount__ground_truth_boolean'] + read_df.columns.tolist())
-
-                # Ensure session_id is appended to the list of ground truth session ids if the boolean is true
-                merged['paramount__ground_truth'] = merged.apply(
-                    lambda row: row['paramount__ground_truth'] + [session_id] if row[
-                        'paramount__ground_truth_boolean'] else row['paramount__ground_truth'],
-                    axis=1
-                )
-                merged = merged.drop(columns=['paramount__ground_truth_boolean'])
-
                 db_instance.update_ground_truth(merged, ground_truth_table_name)
-                session_table_name = 'paramount_ground_truth_sessions'
-                db_instance.create_or_append(pd.DataFrame([session_df]), session_table_name, 'session_id')
 
                 st.session_state['full_df'] = full_df
-                st.session_state['random_suggested_name'] = random_suggested_name()
                 st.rerun()
-
-            # TODO: For train mode, allow date/session/botid filters (imagine massive data).
-            # TODO: For train, try with other functions such that record.py is more robust.
 
     else:
         st.write("No data found. Ensure you use @paramount.record decorator on any functions you want to record.")
