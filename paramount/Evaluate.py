@@ -19,10 +19,13 @@ from paramount.library_functions import (
 from dotenv import load_dotenv, find_dotenv
 if find_dotenv():
     load_dotenv()
-st.set_page_config(layout="wide", page_title="Fini Paramount - Agent-Centric Evals")
+st.set_page_config(layout="wide", page_title="Fini Paramount - Business Evals")
 db_instance = db_connection()
 uuid_sidebar()
 paramount_identifier_colname = os.getenv('PARAMOUNT_IDENTIFIER_COLNAME')
+PARAMOUNT_META_COLS = ast.literal_eval(os.getenv('PARAMOUNT_META_COLS'))
+PARAMOUNT_INPUT_COLS = ast.literal_eval(os.getenv('PARAMOUNT_INPUT_COLS'))
+PARAMOUNT_OUTPUT_COLS = ast.literal_eval(os.getenv('PARAMOUNT_OUTPUT_COLS'))
 
 
 def run():
@@ -30,7 +33,7 @@ def run():
     if not validate_allowed():
         return
 
-    st.title('Record ground truth data')
+    st.title('Evaluate responses')
     ground_truth_table_name = 'paramount_data'
 
     if db_instance.table_exists(ground_truth_table_name):
@@ -62,9 +65,9 @@ def run():
         css_code = "\n".join(css_rules)
         st.markdown(f"<style>{css_code}</style>", unsafe_allow_html=True)
 
-        selected_id_cols = st.multiselect('Identifier and info columns', identifier_cols, format_func=format_func)
-        selected_input_cols = st.multiselect('Input columns', input_cols, format_func=format_func)
-        selected_output_cols = st.multiselect('Output columns', output_cols, format_func=format_func)
+        selected_id_cols = ['paramount__' + col for col in PARAMOUNT_META_COLS]
+        selected_input_cols = ['input_' + col for col in PARAMOUNT_INPUT_COLS]
+        selected_output_cols = ['output__' + col for col in PARAMOUNT_OUTPUT_COLS]
 
         if not selected_id_cols and not selected_input_cols and not selected_output_cols:
             filtered_cols = possible_cols

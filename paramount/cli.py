@@ -11,7 +11,7 @@ os.environ["STREAMLIT_SERVER_HEADLESS"] = "true"
 
 def main():
     directory = os.path.dirname(__file__)
-    app_path = os.path.join(directory, 'Train.py')
+    app_path = os.path.join(directory, 'Evaluate.py')
     sys.argv = ["streamlit", "run", app_path] + sys.argv[1:]
     stcli.main()
 

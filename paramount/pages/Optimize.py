@@ -16,7 +16,7 @@ import requests
 from dotenv import load_dotenv, find_dotenv
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-st.set_page_config(layout="wide", page_title="Fini Paramount - Agent-Centric Evals")
+st.set_page_config(layout="wide", page_title="Fini Paramount - Business Evals")
 db_instance = db_connection()
 uuid_sidebar()
 paramount_identifier_colname = os.getenv('PARAMOUNT_IDENTIFIER_COLNAME')
@@ -67,7 +67,7 @@ def run():
     hide_buttons()
     if not validate_allowed():
         return
-    st.title("Test tweaks and accuracy")
+    st.title("Optimize performance with tweaks")
     if find_dotenv():
         load_dotenv()
     base_url = os.getenv('FUNCTION_API_BASE_URL')

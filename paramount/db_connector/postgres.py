@@ -113,7 +113,7 @@ class PostgresDatabase(Database):
             if records_data:
                 df['paramount__ground_truth'] = df['paramount__ground_truth'].replace("", None)
 
-            # Convert UUID cols to str so Train.py merged df has a successful right join on 'paramount__record_id'
+            # Convert UUID cols to str so Evaluate.py merged df has a successful right join on 'paramount__record_id'
             uuid_cols = [
                 col for col in df.columns
                 if df[col].dtype == 'object'
