@@ -5,6 +5,7 @@ import traceback
 from sqlalchemy import create_engine, inspect, Table, MetaData, select, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID, TEXT, insert as pg_insert
 from sqlalchemy.exc import SQLAlchemyError
+import psycopg2
 from dotenv import load_dotenv, find_dotenv
 import uuid
 if find_dotenv():
@@ -46,19 +47,32 @@ class PostgresDatabase(Database):
                     sql = text(f'ALTER TABLE {table_name} ADD PRIMARY KEY ({primary_key})')
                     conn.execute(sql)
         except SQLAlchemyError as e:
-            err_tcb = traceback.format_exc()
-            print(f"An error occurred while appending to {table_name}: {e}: {err_tcb}")
-            raise  # Re-raise the exception for further handling if necessary
+            if issubclass(psycopg2.errors.lookup(e.orig.pgcode), psycopg2.errors.UndefinedColumn):
+                self.create_columns(df_copy, table_name)
+            else:
+                err_tcb = traceback.format_exc()
+                print(f"An error occurred while appending to {table_name}: {e}: {err_tcb}")
+                raise  # Re-raise the exception for further handling if necessary
+
+    def create_columns(self, df, table_name):
+        print(f"PARAMOUNT: UndefinedColumn error - Adding new columns to table to prevent this for future invocations")
+        new_cols = [col for col in df.columns if col not in self.existing_tables.get(table_name, [])]
+        for column in new_cols:
+            sql = text(f'ALTER TABLE {table_name} ADD COLUMN {column} TEXT')
+            with self.engine.begin() as conn:
+                conn.execute(sql)
+                print(f"Added column {column} to {table_name}.")
+        self.existing_tables[table_name] = self.existing_tables.get(table_name, []) + new_cols
 
     def table_exists(self, table_name):
         if table_name in self.existing_tables:
-            return True
+            return self.existing_tables[table_name]
         else:
             # We can use the SQLAlchemy Inspector to check for the table
             inspector = inspect(self.engine)
             has_table = inspector.has_table(table_name)
             if has_table:
-                self.existing_tables[table_name] = True
+                self.existing_tables[table_name] = [col['name'] for col in inspector.get_columns(table_name)]
             return has_table
 
     # Not doing a full table replacement as in CSV DB, since this runs in prod and replacing tables there is a big no-no
