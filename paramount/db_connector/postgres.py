@@ -2,7 +2,7 @@ import os
 import pandas as pd
 from .db import Database
 import traceback
-from sqlalchemy import create_engine, inspect, Table, MetaData, select, text
+from sqlalchemy import create_engine, inspect, Table, MetaData, select, text, desc, and_
 from sqlalchemy.dialects.postgresql import JSONB, UUID, TEXT, insert as pg_insert
 from sqlalchemy.exc import SQLAlchemyError
 import psycopg2
@@ -100,18 +100,28 @@ class PostgresDatabase(Database):
             print(f"{e}: {err_tcb}")
             raise
 
-    def get_table(self, table_name, records_data, identifier_column_name, identifier_value):
+    def get_table(self, table_name, random_sample, identifier_column_name, identifier_value):
         metadata = MetaData()
         table = Table(table_name, metadata, autoload_with=self.engine)
 
         identifier_column = table.c[identifier_column_name]  # Get the column to filter on
 
         # Prepare the select statement with a where clause
-        stmt = select(table).where(identifier_column == identifier_value)  # SQLAlchemy overloads == operator to run it
+        # SQLAlchemy overloads == operator to run it
+        stmt = (
+            select(table)
+            .where(
+                and_(
+                    identifier_column == identifier_value,
+                    True if random_sample else table.c.paramount__evaluation.notilike('')
+                )
+            )
+            .order_by(desc('paramount__recorded_at'))
+            .limit(100)
+        )
         with self.engine.connect() as conn:
             df = pd.read_sql(stmt, conn)
-            if records_data:
-                df['paramount__evaluation'] = df['paramount__evaluation'].replace("", None)
+            df['paramount__evaluation'] = df['paramount__evaluation'].replace("", None)
 
             # Convert UUID cols to str so Evaluate.py merged df has a successful right join on 'paramount__record_id'
             uuid_cols = [

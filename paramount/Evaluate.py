@@ -13,6 +13,7 @@ from paramount.library_functions import (
     db_connection,
     uuid_sidebar,
     validate_allowed,
+    center_metric,
 )
 from dotenv import load_dotenv, find_dotenv
 if find_dotenv():
@@ -25,6 +26,7 @@ PARAMOUNT_META_COLS = ast.literal_eval(os.getenv('PARAMOUNT_META_COLS'))
 PARAMOUNT_INPUT_COLS = ast.literal_eval(os.getenv('PARAMOUNT_INPUT_COLS'))
 PARAMOUNT_OUTPUT_COLS = ast.literal_eval(os.getenv('PARAMOUNT_OUTPUT_COLS'))
 eval_col = 'paramount__evaluation'
+accurate_eval = '✅ Accurate'
 
 
 def run():
@@ -33,10 +35,11 @@ def run():
         return
 
     st.title('Evaluate responses')
+    st.write('Based on the 100 latest entries')
     ground_truth_table_name = 'paramount_data'
 
     if db_instance.table_exists(ground_truth_table_name):
-        read_df = db_instance.get_table(ground_truth_table_name, records_data=True,
+        read_df = db_instance.get_table(ground_truth_table_name, random_sample=True,
                                         identifier_value=st.session_state['user_identifier'],
                                         identifier_column_name=paramount_identifier_colname)
         possible_cols = read_df.columns
@@ -87,7 +90,7 @@ def run():
             "Evaluation",
             width="medium",
             options=[
-                "✅ Accurate",
+                accurate_eval,
                 "❔ Missing Info",  # RAG failed or Document missing
                 "❌ Irrelevant Extra Info",  # RAG failed, included too much
                 "🕰️ Wrong/Outdated Info",  # Document needs updating
@@ -109,6 +112,10 @@ def run():
         full_df.loc[diff_eval_ids, 'paramount__evaluated_at'] = current_time_utc
 
         if len(full_df) > 0:
+            accuracy = 100*len(full_df[full_df[eval_col] == accurate_eval]) / len(full_df)
+            formatted_accuracy = "{:.1f}%".format(accuracy)
+            center_metric()
+            st.metric(label="Accuracy", value=formatted_accuracy)
             if large_centered_button("Save session"):
                 # Including selected_output_cols in the merge, in order to include any UI edits done for the outputs
                 merged = pd.merge(full_df[[eval_col, 'paramount__recording_id', 'paramount__evaluated_at']+selected_output_cols],
