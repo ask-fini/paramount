@@ -8,7 +8,7 @@ with open(os.path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 setup(
    name='paramount',
-   version='0.1.3',
+   version='0.2.1',
    description='Business Evals for LLMs',
    long_description=long_description,
    long_description_content_type='text/markdown',

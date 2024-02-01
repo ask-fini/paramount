@@ -100,20 +100,19 @@ class PostgresDatabase(Database):
             print(f"{e}: {err_tcb}")
             raise
 
-    def get_table(self, table_name, random_sample, identifier_column_name, identifier_value):
+    def get_table(self, table_name, all_rows, identifier_column_name, identifier_value):
         metadata = MetaData()
         table = Table(table_name, metadata, autoload_with=self.engine)
 
         identifier_column = table.c[identifier_column_name]  # Get the column to filter on
 
         # Prepare the select statement with a where clause
-        # SQLAlchemy overloads == operator to run it
         stmt = (
             select(table)
             .where(
                 and_(
-                    identifier_column == identifier_value,
-                    True if random_sample else table.c.paramount__evaluation.notilike('')
+                    identifier_column == identifier_value,  # SQLAlchemy overloads == operator to run it
+                    True if all_rows else table.c.paramount__evaluation.notilike('')  # notilike: gets only eval'd rows
                 )
             )
             .order_by(desc('paramount__recorded_at'))

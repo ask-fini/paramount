@@ -86,7 +86,7 @@ def run():
     ground_truth_table_name = 'paramount_data'
 
     if db_instance.table_exists(ground_truth_table_name):
-        read_df = db_instance.get_table(ground_truth_table_name, random_sample=False,
+        read_df = db_instance.get_table(ground_truth_table_name, all_rows=False,
                                         identifier_value=st.session_state['user_identifier'],
                                         identifier_column_name=paramount_identifier_colname)
 
