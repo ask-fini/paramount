@@ -95,9 +95,8 @@ def run():
                 "❌ Irrelevant Extra Info",  # RAG failed, included too much
                 "🕰️ Wrong/Outdated Info",  # Document needs updating
                 "📃 Didn't follow instruction",  # Prompt was wrong
-                ""  # Empty choice, to leave it blank
             ],
-            required=True
+            required=False
         )
 
         def on_change(full_df):  # Needed to ensure UI updates are synchronized correctly across ground truth clicks
