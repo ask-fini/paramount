@@ -94,7 +94,8 @@ def run():
                 "❔ Missing Info",  # RAG failed or Document missing
                 "❌ Irrelevant Extra Info",  # RAG failed, included too much
                 "🕰️ Wrong/Outdated Info",  # Document needs updating
-                "📃 Didn't follow instruction"  # Prompt was wrong
+                "📃 Didn't follow instruction",  # Prompt was wrong
+                ""  # Empty choice, to leave it blank
             ],
             required=True
         )

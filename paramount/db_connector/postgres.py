@@ -77,6 +77,9 @@ class PostgresDatabase(Database):
 
     # Not doing a full table replacement as in CSV DB, since this runs in prod and replacing tables there is a big no-no
     def update_ground_truth(self, df, table_name):
+        df.fillna(value={col: None for col in df.select_dtypes(include=['datetime', 'datetime64']).columns},
+                  inplace=True)  # To avoid this error: invalid input syntax for type timestamp: "NaT"
+
         metadata = MetaData()
         table = Table(table_name, metadata, autoload_with=self.engine)
 
