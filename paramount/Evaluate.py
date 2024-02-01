@@ -110,6 +110,7 @@ def run():
         diff_eval_ids = read_df.index[read_df[eval_col] != full_df.loc[read_df.index, eval_col]]
         current_time_utc = datetime.now(pytz.timezone('UTC')).replace(microsecond=0).isoformat()
         full_df.loc[diff_eval_ids, 'paramount__evaluated_at'] = current_time_utc
+        full_df[eval_col] = full_df[eval_col].fillna('').astype(str)
 
         if len(full_df) > 0:
             accuracy = 100*len(full_df[full_df[eval_col] == accurate_eval]) / len(full_df)

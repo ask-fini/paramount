@@ -90,7 +90,11 @@ def run():
                                         identifier_value=st.session_state['user_identifier'],
                                         identifier_column_name=paramount_identifier_colname)
 
-        st.dataframe(read_df)
+        selected_output_cols = ['output__' + col for col in PARAMOUNT_OUTPUT_COLS]
+        disabled_cols = set([col for col in read_df.columns if col not in ['paramount__evaluation'] + selected_output_cols])
+        column_config = {col: format_func(col) for col in read_df.columns}
+        st.dataframe(data=color_columns(read_df), column_config=column_config, use_container_width=True,
+                     disabled=disabled_cols, hide_index=True)
 
         input_params = [col for col in read_df.columns if col.startswith('input_')]
         selected_input_var = st.selectbox("Select an input param to vary", input_params,
