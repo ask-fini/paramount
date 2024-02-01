@@ -90,6 +90,8 @@ def run():
                                         identifier_value=st.session_state['user_identifier'],
                                         identifier_column_name=paramount_identifier_colname)
 
+        st.dataframe(read_df)
+
         input_params = [col for col in read_df.columns if col.startswith('input_')]
         selected_input_var = st.selectbox("Select an input param to vary", input_params,
                                           format_func=format_func)
@@ -118,7 +120,7 @@ def run():
                         clean_test_set = st.session_state['clean_test_set']
                     else:
                         clean_test_set = test_set.applymap(clean_and_parse)
-                        progress_bar = st.progress(0, "Running against ground truth")
+                        progress_bar = st.progress(0, "Running against evaluation")
                         total_length = len(clean_test_set)
                         for i, (index, row) in enumerate(clean_test_set.iterrows()):
                             args = get_values_dict('input_args__', row)
@@ -126,7 +128,8 @@ def run():
 
                             result = invoke_via_api(base_url=base_url, func_name=row['paramount__function_name'],
                                                     args=args, kwargs=kwargs)
-                            progress_bar.progress((i + 1) / total_length, "Running against ground truth")
+                            evalstr = f"Running against evaluation {i+1}/{total_length}"
+                            progress_bar.progress((i + 1) / total_length, evalstr)
                             for output_col in session_output_cols:
                                 # Match function outputs to column names
                                 identifying_info = output_col.split('__')[1].split('_')

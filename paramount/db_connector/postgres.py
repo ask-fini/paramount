@@ -79,7 +79,7 @@ class PostgresDatabase(Database):
     # Not doing a full table replacement as in CSV DB, since this runs in prod and replacing tables there is a big no-no
     def update_ground_truth(self, df, table_name):
         # Replacing pd.NaT with None so DB accepts it, otherwise get: invalid input syntax for type timestamp: "NaT"
-        df['paramount__evaluated_at'] = df['paramount__evaluated_at'].replace({np.nan: None})
+        df = df.replace({np.nan: None})
 
         metadata = MetaData()
         table = Table(table_name, metadata, autoload_with=self.engine)
