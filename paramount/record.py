@@ -133,6 +133,7 @@ def record(flask_app):
                             result_data[f'output__{i}'] = output
                     df = pd.DataFrame([result_data])
                     df['paramount__recorded_at'] = pd.to_datetime(df['paramount__recorded_at'])
+                    df['paramount__evaluated_at'] = pd.to_datetime(df['paramount__evaluated_at'])
 
                     # Fire and forget for this heavy operation
                     threading.Thread(target=db_instance.create_or_append,
