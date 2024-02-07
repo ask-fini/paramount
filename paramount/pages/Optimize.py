@@ -83,12 +83,14 @@ def run():
     def clicked(var, value):
         st.session_state[var] = value
 
+    # ---- TODO: GET EVALS
     ground_truth_table_name = 'paramount_data'
 
     if db_instance.table_exists(ground_truth_table_name):
         read_df = db_instance.get_table(ground_truth_table_name, all_rows=False,
                                         identifier_value=st.session_state['user_identifier'],
                                         identifier_column_name=paramount_identifier_colname)
+        # ---- TODO: END GET EVALS
 
         column_config = {col: format_func(col) for col in read_df.columns}
         st.dataframe(data=color_columns(read_df), column_config=column_config, use_container_width=True, hide_index=True)
@@ -123,6 +125,7 @@ def run():
                         clean_test_set = test_set.applymap(clean_and_parse)
                         progress_bar = st.progress(0, "Running against evaluation")
                         total_length = len(clean_test_set)
+                        # ---- TODO: POST TEST
                         for i, (index, row) in enumerate(clean_test_set.iterrows()):
                             args = get_values_dict('input_args__', row)
                             kwargs = get_values_dict('input_kwargs__', row)
@@ -161,6 +164,8 @@ def run():
                         cosine_similarities = [cosine_similarity(tfidf_matrix_ground_truth[i:i + 1],
                                                                  tfidf_matrix_test_set[i:i + 1])[0][0]
                                                for i in range(tfidf_matrix_ground_truth.shape[0])]
+
+                        # ---- TODO: END POST TEST
 
                         # Add the cosine similarity scores to the DataFrame
                         clean_test_set['cosine_similarity'] = cosine_similarities

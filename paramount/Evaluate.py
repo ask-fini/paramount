@@ -36,12 +36,15 @@ def run():
 
     st.title('Evaluate responses')
     st.write('Based on the 100 latest entries')
+
+    # ---- TODO: GET LATEST
     ground_truth_table_name = 'paramount_data'
 
     if db_instance.table_exists(ground_truth_table_name):
         read_df = db_instance.get_table(ground_truth_table_name, all_rows=True,
                                         identifier_value=st.session_state['user_identifier'],
                                         identifier_column_name=paramount_identifier_colname)
+        # ---- TODO: END GET LATEST
         possible_cols = read_df.columns
 
         read_df[eval_col] = read_df[eval_col].fillna('')
@@ -118,12 +121,14 @@ def run():
             center_metric()
             st.metric(label="Accuracy", value=formatted_accuracy)
             if large_centered_button("Save session"):
+                # ---- TODO: POST EVALS
                 # Including selected_output_cols in the merge, in order to include any UI edits done for the outputs
                 merged = pd.merge(full_df[[eval_col, 'paramount__recording_id', 'paramount__evaluated_at']+selected_output_cols],
                                   read_df.drop(columns=[eval_col, 'paramount__evaluated_at']+selected_output_cols,
                                                errors='ignore'), on='paramount__recording_id', how='right')
 
                 db_instance.update_ground_truth(merged, ground_truth_table_name)
+                # ---- TODO: END POST EVALS
 
                 st.session_state['full_df'] = full_df
                 st.rerun()

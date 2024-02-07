@@ -1,16 +1,7 @@
 import streamlit as st
-from importlib.resources import read_text
-import random
 import pandas as pd
 from .db_connector import db
 import uuid
-
-
-@st.cache_data
-def get_words():
-    word_file = read_text('paramount', 'thousand_random_words.txt')
-    word_list = word_file.splitlines()
-    return word_list
 
 
 @st.cache_resource
@@ -84,10 +75,6 @@ def center_metric():
     '''
 
     st.markdown(f'<style>{css}</style>', unsafe_allow_html=True)
-
-
-def random_suggested_name():
-    return ' '.join([item[0].upper() + item[1:].lower() for item in random.sample(get_words(), 2)])
 
 
 def get_colors():
