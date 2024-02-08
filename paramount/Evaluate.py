@@ -3,6 +3,7 @@ import streamlit as st
 import ast
 import os
 import pytz
+import requests
 from datetime import datetime
 from paramount.library_functions import (
     hide_buttons,
@@ -25,6 +26,7 @@ paramount_identifier_colname = os.getenv('PARAMOUNT_IDENTIFIER_COLNAME')
 PARAMOUNT_META_COLS = ast.literal_eval(os.getenv('PARAMOUNT_META_COLS'))
 PARAMOUNT_INPUT_COLS = ast.literal_eval(os.getenv('PARAMOUNT_INPUT_COLS'))
 PARAMOUNT_OUTPUT_COLS = ast.literal_eval(os.getenv('PARAMOUNT_OUTPUT_COLS'))
+PARAMOUNT_API_ENDPOINT = os.getenv('PARAMOUNT_API_ENDPOINT')
 eval_col = 'paramount__evaluation'
 accurate_eval = '✅ Accurate'
 
@@ -37,14 +39,12 @@ def run():
     st.title('Evaluate responses')
     st.write('Based on the 100 latest entries')
 
-    # ---- TODO: GET LATEST
-    ground_truth_table_name = 'paramount_data'
+    results = requests.post(f'{PARAMOUNT_API_ENDPOINT}/latest',
+                            json={'company_uuid': st.session_state['user_identifier']})
+    if results.status_code == 200:
+        records = results.json().get('latest', [])
+        read_df = pd.DataFrame(records)
 
-    if db_instance.table_exists(ground_truth_table_name):
-        read_df = db_instance.get_table(ground_truth_table_name, all_rows=True,
-                                        identifier_value=st.session_state['user_identifier'],
-                                        identifier_column_name=paramount_identifier_colname)
-        # ---- TODO: END GET LATEST
         possible_cols = read_df.columns
 
         read_df[eval_col] = read_df[eval_col].fillna('')
@@ -121,18 +121,15 @@ def run():
             center_metric()
             st.metric(label="Accuracy", value=formatted_accuracy)
             if large_centered_button("Save session"):
-                # ---- TODO: POST EVALS
                 # Including selected_output_cols in the merge, in order to include any UI edits done for the outputs
                 merged = pd.merge(full_df[[eval_col, 'paramount__recording_id', 'paramount__evaluated_at']+selected_output_cols],
                                   read_df.drop(columns=[eval_col, 'paramount__evaluated_at']+selected_output_cols,
                                                errors='ignore'), on='paramount__recording_id', how='right')
-
-                db_instance.update_ground_truth(merged, ground_truth_table_name)
-                # ---- TODO: END POST EVALS
-
+                updated_records = merged.to_dict(orient='records')
+                requests.post(f'{PARAMOUNT_API_ENDPOINT}/submit_evaluations',
+                              json={'updated_records': updated_records})
                 st.session_state['full_df'] = full_df
                 st.rerun()
-
     else:
         st.write("No data found. Ensure you use @paramount.record decorator on any functions you want to record.")
 

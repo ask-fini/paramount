@@ -16,18 +16,12 @@ import requests
 from dotenv import load_dotenv, find_dotenv
 if find_dotenv():
     load_dotenv()
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
 st.set_page_config(layout="wide", page_title="Fini Paramount - Business Evals")
 db_instance = db_connection()
 uuid_sidebar()
 paramount_identifier_colname = os.getenv('PARAMOUNT_IDENTIFIER_COLNAME')
 PARAMOUNT_OUTPUT_COLS = ast.literal_eval(os.getenv('PARAMOUNT_OUTPUT_COLS'))
-
-
-def get_values_dict(col_prefix, row):
-    vals = {col.replace(col_prefix, ''): row[col] for col in row.index if col.startswith(col_prefix)}
-    return vals
+PARAMOUNT_API_ENDPOINT = os.getenv('PARAMOUNT_API_ENDPOINT')
 
 
 def clean_and_parse(val):
@@ -37,35 +31,6 @@ def clean_and_parse(val):
         return val
 
 
-def invoke_via_api(func_name, base_url, args=None, kwargs=None):
-    # construct the endpoint based on the function name
-    endpoint = f'{base_url}/paramount_functions/{func_name}'
-    data_payload = {}
-    if args is not None:
-        data_payload['args'] = args
-    if kwargs is not None:
-        data_payload['kwargs'] = kwargs
-    try:
-        # Send the POST request to the endpoint with JSON payload
-        response = requests.post(endpoint, json=data_payload)
-
-        # Check if the request was successful
-        if response.status_code == 200:
-            # Handle successful response
-            response = response.json()
-        else:
-            # Handle errors
-            err = (response.status_code, response.text)
-            print("Error:", err)
-            response = err
-    except requests.exceptions.RequestException as e:
-        # Handle request exceptions (e.g., connection errors)
-        print("Request failed:", e)
-        response = e
-
-    return response
-
-
 def run():
     hide_buttons()
     if not validate_allowed():
@@ -73,7 +38,6 @@ def run():
     st.title("Optimize performance with tweaks")
     if find_dotenv():
         load_dotenv()
-    base_url = os.getenv('FUNCTION_API_BASE_URL')
 
     inits = ['clicked_eval']
     for var in inits:
@@ -83,14 +47,11 @@ def run():
     def clicked(var, value):
         st.session_state[var] = value
 
-    # ---- TODO: GET EVALS
-    ground_truth_table_name = 'paramount_data'
-
-    if db_instance.table_exists(ground_truth_table_name):
-        read_df = db_instance.get_table(ground_truth_table_name, all_rows=False,
-                                        identifier_value=st.session_state['user_identifier'],
-                                        identifier_column_name=paramount_identifier_colname)
-        # ---- TODO: END GET EVALS
+    results = requests.post(f'{PARAMOUNT_API_ENDPOINT}/latest',
+                            json={'evaluated_rows_only': True, 'company_uuid': st.session_state['user_identifier']})
+    if results.status_code == 200:
+        records = results.json().get('latest', [])
+        read_df = pd.DataFrame(records)
 
         column_config = {col: format_func(col) for col in read_df.columns}
         st.dataframe(data=color_columns(read_df), column_config=column_config, use_container_width=True, hide_index=True)
@@ -125,47 +86,24 @@ def run():
                         clean_test_set = test_set.applymap(clean_and_parse)
                         progress_bar = st.progress(0, "Running against evaluation")
                         total_length = len(clean_test_set)
-                        # ---- TODO: POST TEST
                         for i, (index, row) in enumerate(clean_test_set.iterrows()):
-                            args = get_values_dict('input_args__', row)
-                            kwargs = get_values_dict('input_kwargs__', row)
-
-                            result = invoke_via_api(base_url=base_url, func_name=row['paramount__function_name'],
-                                                    args=args, kwargs=kwargs)
+                            record = row.to_dict()
+                            result = requests.post(f'{PARAMOUNT_API_ENDPOINT}/infer',
+                                                   json={'record': record, 'output_cols': session_output_cols})
+                            result = result.json().get('result', {})
+                            for col in result.keys():
+                                if col.startswith('test_'):
+                                    clean_test_set.at[index, 'test_' + col] = result[col]
                             evalstr = f"Running against evaluation {i+1}/{total_length}"
                             progress_bar.progress((i + 1) / total_length, evalstr)
-                            for output_col in session_output_cols:
-                                # Match function outputs to column names
-                                identifying_info = output_col.split('__')[1].split('_')
-                                output_index = int(identifying_info[0])-1
-                                output_colname = None if len(identifying_info) < 2 else\
-                                    "_".join(identifying_info[1:])
-                                data_item = result[output_index] if not output_colname else\
-                                    result[output_index][output_colname]
-                                clean_test_set.at[index, 'test_'+output_col] = str(data_item)
 
                         progress_bar.empty()
                         clean_test_set = clean_test_set[cols_to_display]
 
-                        vectorizer = TfidfVectorizer()
-
-                        # To ensure comparability
-                        clean_test_set[selected_output_var] = clean_test_set[selected_output_var].astype(str)
-                        clean_test_set['test_' + selected_output_var] =\
-                            clean_test_set['test_' + selected_output_var].astype(str)
-
-                        tfidf_matrix = vectorizer.fit_transform(clean_test_set[selected_output_var])
-
-                        # Transform both the ground truth and test set data (columns 1 and 2)
-                        tfidf_matrix_ground_truth = vectorizer.transform(clean_test_set[selected_output_var])
-                        tfidf_matrix_test_set = vectorizer.transform(clean_test_set['test_'+selected_output_var])
-
-                        # Calculate cosine similarity between the corresponding rows in columns 1 and 2
-                        cosine_similarities = [cosine_similarity(tfidf_matrix_ground_truth[i:i + 1],
-                                                                 tfidf_matrix_test_set[i:i + 1])[0][0]
-                                               for i in range(tfidf_matrix_ground_truth.shape[0])]
-
-                        # ---- TODO: END POST TEST
+                        result = requests.post(f'{PARAMOUNT_API_ENDPOINT}/similarity',
+                                               json={'output_col_to_be_tested': selected_output_var,
+                                                     'records': clean_test_set.to_dict(orient='records')})
+                        cosine_similarities = result.json().get('result', {})
 
                         # Add the cosine similarity scores to the DataFrame
                         clean_test_set['cosine_similarity'] = cosine_similarities
