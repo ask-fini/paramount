@@ -9,6 +9,7 @@ from paramount.library_functions import (
     db_connection,
     uuid_sidebar,
     validate_allowed,
+    get_result_from_colname,
 )
 import os
 import ast
@@ -50,8 +51,9 @@ def run():
     results = requests.post(f'{PARAMOUNT_API_ENDPOINT}/latest',
                             json={'evaluated_rows_only': True, 'company_uuid': st.session_state['user_identifier']})
     if results.status_code == 200:
-        records = results.json().get('latest', [])
-        read_df = pd.DataFrame(records)
+        records = results.json().get('result', [])
+        column_order = results.json().get('column_order', [])
+        read_df = pd.DataFrame(records)[column_order]
 
         column_config = {col: format_func(col) for col in read_df.columns}
         st.dataframe(data=color_columns(read_df), column_config=column_config, use_container_width=True, hide_index=True)
@@ -91,9 +93,9 @@ def run():
                             result = requests.post(f'{PARAMOUNT_API_ENDPOINT}/infer',
                                                    json={'record': record, 'output_cols': session_output_cols})
                             result = result.json().get('result', {})
-                            for col in result.keys():
-                                if col.startswith('test_'):
-                                    clean_test_set.at[index, 'test_' + col] = result[col]
+                            for output_col in session_output_cols:
+                                _, _, data_item = get_result_from_colname(result, output_col)
+                                clean_test_set.at[index, 'test_' + output_col] = str(data_item)
                             evalstr = f"Running against evaluation {i+1}/{total_length}"
                             progress_bar.progress((i + 1) / total_length, evalstr)
 

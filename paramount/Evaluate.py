@@ -42,8 +42,9 @@ def run():
     results = requests.post(f'{PARAMOUNT_API_ENDPOINT}/latest',
                             json={'company_uuid': st.session_state['user_identifier']})
     if results.status_code == 200:
-        records = results.json().get('latest', [])
-        read_df = pd.DataFrame(records)
+        records = results.json().get('result', [])
+        column_order = results.json().get('column_order', [])
+        read_df = pd.DataFrame(records)[column_order]
 
         possible_cols = read_df.columns
 

@@ -6,6 +6,7 @@ import traceback
 import requests
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+from library_functions import get_result_from_colname
 db_instance = db.get_database()
 app = Flask(__name__)
 
@@ -25,15 +26,21 @@ def latest():
         company_uuid = str(data['company_uuid'])
         evaluated_rows_only = bool(data.get('evaluated_rows_only', False))
         all_rows = not evaluated_rows_only
-        response_data = {"result": None}
+        response_data = {"result": None, "column_order": []}
 
+        # TODO: Only get non-error rows. Possible by passing "output cols that are supposed to be non-null" to read_df
+        # eg. PARAMOUNT_OUTPUT_COLS env var, to get_table() fct: can tell _and() clause that those cols must be non-null
         if db_instance.table_exists(ground_truth_table_name):
             read_df = db_instance.get_table(ground_truth_table_name, all_rows=all_rows,
                                             identifier_value=company_uuid,
                                             identifier_column_name=paramount_identifier_colname)
             # Convert the DataFrame into a dictionary with records orientation to properly format it for JSON
-            data_dict = read_df.to_dict(orient='records')
+            # Doing None Cleaning: Otherwise None becomes 'None' and UUID upsert fails (UUID col does not accept 'None')
+            # TODO: Ideally, need for cleaning would be prevented upstream, so that 'None' never happens to begin with..
+            data_dict = [{k: None if v is None or v == "None" else v for k, v in record.items()}
+                         for record in read_df.to_dict(orient='records')]
             response_data["result"] = data_dict
+            response_data["column_order"] = read_df.columns.tolist()
     except Exception as e:
         err_obj = {"error": err_dict(f"{type(e).__name__}: {e}", traceback.format_exc())}
         print(err_obj)
@@ -75,18 +82,9 @@ def infer():
                                           args=args, kwargs=kwargs)
 
         for output_col in session_output_cols:
-            # Match function outputs to column names.
-            # For example, This turns 'output__2_answer' into -> (2, answer)
-            # Where 2 is the order of received outputs, and answer is the output varname (if exists)
-            identifying_info = output_col.split('__')[1].split('_')
-            output_index = int(identifying_info[0]) - 1
-            output_colname = None if len(identifying_info) < 2 else \
-                "_".join(identifying_info[1:])
-
-            data_item = result[output_index] if not output_colname else \
-                result[output_index][output_colname]
+            output_index, _, data_item = get_result_from_colname(result, output_col)
             testcol = 'test_' + output_col
-            result[testcol] = str(data_item)
+            result[output_index][testcol] = str(data_item)
 
     except Exception as e:
         err_obj = {"error": err_dict(f"{type(e).__name__}: {e}", traceback.format_exc())}
@@ -103,7 +101,7 @@ def similarity():
         vectorizer = TfidfVectorizer()
 
         selected_output_var = str(data['output_col_to_be_tested'])
-        clean_test_set = pd.DataFrame(dict(data['records']))
+        clean_test_set = pd.DataFrame(data['records'])
 
         # To ensure comparability
         clean_test_set[selected_output_var] = clean_test_set[selected_output_var].astype(str)

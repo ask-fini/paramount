@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from .db_connector import db
+from db_connector import db
 import uuid
 
 
@@ -15,6 +15,22 @@ def large_centered_button(text, on_click=None, args=None):
     st.markdown("<style>div.row-widget.stButton { display: flex; justify-content: center; }</style>",
                 unsafe_allow_html=True)
     return st.button(text, on_click=on_click, args=args)
+
+
+def get_result_from_colname(result, output_col):
+    '''
+    Match function outputs to column names.
+    For example, This turns 'output__1_answer' into -> (1, answer)
+    Where 1 is the index to use of the returned tuple, and answer is the output varname (if exists)
+    :param result:
+    :param output_col:
+    :return:
+    '''
+    identifying_info = output_col.split('__')[1].split('_')  # output__1_answer -> [1, answer]
+    output_index = int(identifying_info[0]) - 1  # 1 -> 0th index
+    output_colname = None if len(identifying_info) < 2 else "_".join(identifying_info[1:])  # answer or blank if no name
+    data_item = result[output_index] if not output_colname else result[output_index][output_colname]  # Get the value
+    return output_index, output_colname, data_item
 
 
 def uuid_sidebar():
