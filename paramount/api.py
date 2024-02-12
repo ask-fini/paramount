@@ -1,12 +1,12 @@
 import os
 import pandas as pd
 from flask import Flask, request, jsonify
-from db_connector import db
+from paramount.db_connector import db
 import traceback
 import requests
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from library_functions import get_result_from_colname
+from paramount.library_functions import get_result_from_colname
 db_instance = db.get_database()
 app = Flask(__name__)
 
