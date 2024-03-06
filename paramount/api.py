@@ -7,6 +7,8 @@ import requests
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from paramount.library_functions import get_result_from_colname
+from datetime import datetime
+
 db_instance = db.get_database()
 app = Flask(__name__)
 
@@ -17,6 +19,18 @@ base_url = os.getenv('FUNCTION_API_BASE_URL')
 def err_dict(err_type, err_tcb):
     return {"type": err_type, "stacktrace": err_tcb}
 
+@app.route('/health', methods=['GET'])
+def health():
+    return jsonify({"status": "OK", "time": datetime.now()}), 200
+
+# For disabling CORS
+@app.after_request
+def after_request(response):
+    header = response.headers
+    header['Access-Control-Allow-Origin'] = '*'
+    header['Access-Control-Allow-Headers'] = 'Content-Type, Authorization'
+    header['Access-Control-Allow-Methods'] = 'OPTIONS, HEAD, GET, POST, DELETE, PUT'
+    return response
 
 @app.route('/latest', methods=['POST'])
 def latest():
@@ -71,6 +85,7 @@ def submit_evaluations():
 @app.route('/infer', methods=['POST'])
 def infer():
     data = request.get_json()
+    print(data)
     try:
         row = dict(data['record'])
         session_output_cols = list(data['output_cols'])
@@ -78,8 +93,12 @@ def infer():
         args = get_values_dict('input_args__', row)
         kwargs = get_values_dict('input_kwargs__', row)
 
+        print("\n\n", 'args', args, 'kwargs', kwargs, 'baseurl', base_url, 'row', row['paramount__function_name'], "\n\n")
+
         result = invoke_via_functions_api(base_url=base_url, func_name=row['paramount__function_name'],
                                           args=args, kwargs=kwargs)
+        
+        print(2222, result)
 
         for output_col in session_output_cols:
             output_index, _, data_item = get_result_from_colname(result, output_col)
