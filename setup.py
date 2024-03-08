@@ -13,7 +13,7 @@ setup(
    long_description=long_description,
    long_description_content_type='text/markdown',
    entry_points={
-       'console_scripts': ['paramount=paramount.cli:main'],
+       'console_scripts': ['paramount=paramount.server.cli:main'],
    },
    author='Hakim K',
    author_email='5586611+hakimkhalafi@users.noreply.github.com',

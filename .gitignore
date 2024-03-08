@@ -70,3 +70,6 @@ target/
 .env/
 
 paramount_*.csv
+
+# In order to not include actual toml file with sensitive data
+paramount.toml

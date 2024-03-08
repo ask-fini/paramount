@@ -17,4 +17,4 @@ COPY . $APP_HOME/
 
 RUN pip install --no-cache-dir .
 
-CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 paramount.wsgi:app
+CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 paramount.server.wsgi:app

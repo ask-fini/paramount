@@ -9,7 +9,7 @@ Business Evals for LLMs
 **Server**
 
 ```py
-pip install . # or python3 -m pip install .
+pip install paramount # or python3 -m pip install paramount
 ```
 
 **Client**
@@ -23,7 +23,7 @@ pnpm i
 **Server**
 
 ```py
-gunicorn --bind :9001 --workers 1 --threads 8 --timeout 0 paramount.wsgi:app # or make run-server
+gunicorn --bind :9001 --workers 1 --threads 8 --timeout 0 paramount.server.wsgi:app # or make run-server
 ```
 
 **Client**

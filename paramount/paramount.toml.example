@@ -1,0 +1,18 @@
+[record]
+enabled = true  # PARAMOUNT_IS_LIVE="TRUE"
+function_url = "http://localhost:9000"  # FUNCTION_API_BASE_URL=..
+
+[db]
+type = "postgres"  # PARAMOUNT_DB_TYPE="postgres"
+	[db.postgres]  # PARAMOUNT_POSTGRES_CONNECTION_STRING=...
+	connection_string = "..."
+
+[api]
+endpoint = "http://localhost:9001"  # PARAMOUNT_API_ENDPOINT=...
+split_by_id = true  # To be implemented in the future, its a choice whether ID should be a splitter (for fini its company_uuid)
+identifier_colname = "input_args__company_uuid"  # PARAMOUNT_IDENTIFIER_COLNAME=..
+
+[ui]
+meta_cols = ['recorded_at']  # PARAMOUNT_META_COLS=..
+input_cols = ['args__message_history', 'args__new_question']  # PARAMOUNT_INPUT_COLS=..
+output_cols = ['1_answer', '1_based_on']  # PARAMOUNT_OUTPUT_COLS=..
