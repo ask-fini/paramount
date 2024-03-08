@@ -1,8 +1,8 @@
 import { useContext, useEffect, useState } from 'react'
-import { AppContext } from '../context'
+import { AppContext } from '../context.tsx'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import LoaderIcon from '../components/Icons/LoaderIcon'
-import ArrowRightIcon from '../components/Icons/ArrowRightIcon'
+import LoaderIcon from '../components/Icons/LoaderIcon.tsx'
+import ArrowRightIcon from '../components/Icons/ArrowRightIcon.tsx'
 
 export default function HomePage() {
   const { identifier, setIdentifier, loading, getEvaluateData } =

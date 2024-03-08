@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from paramount.db_connector import db
+from paramount.server.db_connector import db
 import uuid
 
 

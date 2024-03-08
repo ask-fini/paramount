@@ -1,4 +1,4 @@
-import { AppContext } from '@/context'
+import { AppContext } from '@/context.tsx'
 import { useContext } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 

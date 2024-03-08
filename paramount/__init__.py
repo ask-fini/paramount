@@ -1,1 +1,1 @@
-from .record import record
+from paramount.server.record import record

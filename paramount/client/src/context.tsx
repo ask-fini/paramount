@@ -1,13 +1,13 @@
 import { createContext, useEffect, useState } from 'react'
-import { IRecord, TResult } from '@/lib/types'
+import { IRecord, TResult } from '@/lib/types.ts'
 import { ColDef } from 'ag-grid-community'
 import {
   getCellEditorParams,
   getEditableTableHeaders,
   getEvaluateTableHeaders,
-} from '@/lib/utils'
-import { ACCURATE_EVALUTATION, EVALUTATION_HEADER } from '@/lib/constants'
-import Services from '@/lib/services'
+} from '@/lib/utils.ts'
+import { ACCURATE_EVALUTATION, EVALUTATION_HEADER } from '@/lib/constants.ts'
+import Services from '@/lib/services.ts'
 
 interface IAppState {
   identifier: string

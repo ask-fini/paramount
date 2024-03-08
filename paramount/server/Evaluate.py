@@ -5,7 +5,7 @@ import os
 import pytz
 import requests
 from datetime import datetime
-from paramount.library_functions import (
+from paramount.server.library_functions import (
     hide_buttons,
     color_columns,
     get_colors,

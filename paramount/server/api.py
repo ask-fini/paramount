@@ -1,12 +1,12 @@
 import os
 import pandas as pd
 from flask import Flask, request, jsonify
-from paramount.db_connector import db
+from paramount.server.db_connector import db
 import traceback
 import requests
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from paramount.library_functions import get_result_from_colname
+from paramount.server.library_functions import get_result_from_colname
 from datetime import datetime
 
 db_instance = db.get_database()
@@ -19,9 +19,11 @@ base_url = os.getenv('FUNCTION_API_BASE_URL')
 def err_dict(err_type, err_tcb):
     return {"type": err_type, "stacktrace": err_tcb}
 
+
 @app.route('/health', methods=['GET'])
 def health():
     return jsonify({"status": "OK", "time": datetime.now()}), 200
+
 
 # For disabling CORS
 @app.after_request
@@ -32,12 +34,13 @@ def after_request(response):
     header['Access-Control-Allow-Methods'] = 'OPTIONS, HEAD, GET, POST, DELETE, PUT'
     return response
 
+
 @app.route('/latest', methods=['POST'])
 def latest():
     data = request.get_json()
     try:
         ground_truth_table_name = 'paramount_data'
-        company_uuid = str(data['company_uuid'])
+        company_uuid = str(data['company_uuid'])  # TODO: Why did I hardcode this? supposed to be via config..
         evaluated_rows_only = bool(data.get('evaluated_rows_only', False))
         all_rows = not evaluated_rows_only
         response_data = {"result": None, "column_order": []}

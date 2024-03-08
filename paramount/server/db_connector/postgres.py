@@ -135,8 +135,4 @@ class PostgresDatabase(Database):
             ]
             df[uuid_cols] = df[uuid_cols].astype(str)
 
-            for col in df.columns:
-                if df[col].apply(lambda x: isinstance(x, list)).any():
-                    # If any element within the column is a list, convert the whole column
-                    df[col] = df[col].astype(str)
             return df

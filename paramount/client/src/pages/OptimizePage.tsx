@@ -1,18 +1,18 @@
 import { useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { AgGridReact } from 'ag-grid-react'
-import DownloadIcon from '@/components/Icons/DownloadIcon'
-import { AppContext } from '@/context'
+import DownloadIcon from '@/components/Icons/DownloadIcon.tsx'
+import { AppContext } from '@/context.tsx'
 import {
   findCommonValue,
   getHeadersWithPrefix,
   getParamsForExport,
-} from '@/lib/utils'
-import PageSkeleton from '@/components/PageSkeleton'
-import Dropdown from '@/components/Dropdown'
+} from '@/lib/utils.ts'
+import PageSkeleton from '@/components/PageSkeleton.tsx'
+import Dropdown from '@/components/Dropdown.tsx'
 import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-quartz.css'
-import { IRecord } from '@/lib/types'
-import Services from '@/lib/services'
+import { IRecord } from '@/lib/types.ts'
+import Services from '@/lib/services.ts'
 
 export default function OptimizePage() {
   const {
@@ -66,13 +66,9 @@ export default function OptimizePage() {
     if (!foundKey) return
 
     // create new array of object with changing the selectedInputParam value with the most common value
-    // NOTE to Hakim: This string arrays should be handled in server or here
     const ttt = optimizeData.map((o: IRecord) => ({
       ...o,
       [foundKey]: commonValue,
-      input_args__message_history: JSON.parse(
-        o.input_args__message_history.replace(/'/g, '"')
-      ),
     }))
     console.log(123, ttt, foundKey)
     setCleanTestSet(ttt)

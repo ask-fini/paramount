@@ -1,4 +1,4 @@
-import { ILatestDataResult, IRecord, TResult } from '@/lib/types'
+import { ILatestDataResult, IRecord, TResult } from '@/lib/types.ts'
 
 // TODO: change this after fixing env variable issue
 const API_URL = 'http://localhost:9001'

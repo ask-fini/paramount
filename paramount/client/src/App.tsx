@@ -1,5 +1,5 @@
 import { Route, Routes, BrowserRouter } from 'react-router-dom'
-import Navbar from './components/Navbar'
+import Navbar from './components/Navbar.tsx'
 import ErrorPage from './pages/ErrorPage.tsx'
 import EvaluatePage from './pages/EvaluatePage.tsx'
 import OptimizePage from './pages/OptimizePage.tsx'

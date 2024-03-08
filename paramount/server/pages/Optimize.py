@@ -1,6 +1,6 @@
 import pandas as pd
 import streamlit as st
-from paramount.library_functions import (
+from paramount.server.library_functions import (
     color_columns,
     format_func,
     large_centered_button,

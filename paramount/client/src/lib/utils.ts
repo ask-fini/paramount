@@ -1,5 +1,5 @@
-import { ACCURATE_EVALUTATION, EVALUTATION_HEADER } from '@/lib/constants'
-import { IRecord } from '@/lib/types'
+import { ACCURATE_EVALUTATION, EVALUTATION_HEADER } from '@/lib/constants.ts'
+import { IRecord } from '@/lib/types.ts'
 
 function getBoolean(inputSelector: string): boolean {
   return !!(document.querySelector(inputSelector) as HTMLInputElement)?.checked
