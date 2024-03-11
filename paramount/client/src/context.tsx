@@ -3,8 +3,8 @@ import { IAppState, IRecord, TResult } from '@/lib/types'
 import { ColDef } from 'ag-grid-community'
 import {
   getCellEditorParams,
-  getEditableTableHeaders,
-  getEvaluateTableHeaders,
+  getEditableTableHeadersFromToml,
+  getEvaluateTableHeadersFromToml,
 } from '@/lib/utils'
 import { ACCURATE_EVALUTATION, EVALUTATION_HEADER } from '@/lib/constants'
 import Services from '@/lib/services'
@@ -48,8 +48,8 @@ const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
       return { data: null, error }
     }
 
-    const editableColumns = getEditableTableHeaders()
-    const headers = getEvaluateTableHeaders()
+    const editableColumns = getEditableTableHeadersFromToml()
+    const headers = getEvaluateTableHeadersFromToml()
     const columnDefs = headers.map((header) => {
       const isEditable = editableColumns.includes(header)
       const column: ColDef = {

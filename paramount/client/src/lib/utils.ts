@@ -1,5 +1,6 @@
 import { ACCURATE_EVALUTATION, EVALUTATION_HEADER } from '@/lib/constants.ts'
 import { IRecord } from '@/lib/types.ts'
+import paramountConfig from '../../../paramount.toml'
 
 function getBoolean(inputSelector: string): boolean {
   return !!(document.querySelector(inputSelector) as HTMLInputElement)?.checked
@@ -56,6 +57,24 @@ export function getHeadersWithPrefix(header: any, prefix: string): string[] {
   return [
     ...JSON.parse(import.meta.env[header] || []).map((c: string) => prefix + c),
   ]
+}
+
+export function getEvaluateTableHeadersFromToml(): string[] {
+  return [
+    EVALUTATION_HEADER,
+    ...getHeadersFromToml('meta_cols', 'paramount__'),
+    ...getHeadersFromToml('input_cols', 'input_'),
+    ...getHeadersFromToml('output_cols', 'output__'),
+  ]
+}
+
+export function getEditableTableHeadersFromToml(): string[] {
+  return [...getHeadersFromToml('output_cols', 'output__'), EVALUTATION_HEADER]
+}
+
+export function getHeadersFromToml(header: string, prefix: string): string[] {
+  // Considering there is a ui object as default!
+  return paramountConfig['ui'][header].map((c: string) => prefix + c)
 }
 
 export function getCellEditorParams(): { values: string[] } {

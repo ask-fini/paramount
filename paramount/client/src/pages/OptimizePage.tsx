@@ -4,7 +4,7 @@ import DownloadIcon from '@/components/Icons/DownloadIcon'
 import { AppContext } from '@/context'
 import {
   findCommonValue,
-  getHeadersWithPrefix,
+  getHeadersFromToml,
   getParamsForExport,
 } from '@/lib/utils'
 import PageSkeleton from '@/components/PageSkeleton'
@@ -81,10 +81,7 @@ export default function OptimizePage() {
 
   const onTestClick = async () => {
     setTesting(true)
-    const sessionOutputColumns = getHeadersWithPrefix(
-      'VITE_OUTPUT_COLS',
-      'output__'
-    )
+    const sessionOutputColumns = getHeadersFromToml('output_cols', 'output__')
     const colsToDisplay = [
       ...sessionOutputColumns,
       ...sessionOutputColumns.map((item) => 'test_' + item),
