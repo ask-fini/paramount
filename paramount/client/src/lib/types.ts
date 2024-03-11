@@ -1,6 +1,34 @@
+import { ColDef } from 'ag-grid-community'
+
 //
-// const { data, error } = await apiCall(): Promise<Data, Error>
 export type TResult<T, K> = Success<T> | Failure<K>
+
+export interface IAppState {
+  identifier: string
+  setIdentifier: (val: string) => void
+  loading: boolean
+  setLoading: (val: boolean) => void
+  evaluateData: IRecord[]
+  setEvaluateData: (val: IRecord[]) => void
+  evaluateTableHeaders: ColDef[]
+  setEvaluateTableHeaders: (val: ColDef[]) => void
+  optimizeData: IRecord[]
+  setOptimizeData: (val: IRecord[]) => void
+  optimizeTableHeaders: ColDef[]
+  setOptimizeTableHeaders: (val: ColDef[]) => void
+  getEvaluateData: (val: string) => Promise<TResult<any, Error>>
+  getOptimizeData: (val: string) => Promise<TResult<any, Error>>
+  accuracy: number
+  setAccuracy: (val: number) => void
+  handleAccuracyChange: () => void
+  paramountColumns: string[]
+  setParamountColumns: (val: string[]) => void
+  paramountInputColumns: string[]
+  setParamountInputColumns: (val: string[]) => void
+  paramountOutputColumns: string[]
+  setParamountOutputColumns: (val: string[]) => void
+  findParamountColumnHeader: (val: string) => string | null
+}
 
 export interface ILatestDataResult {
   data: IRecord[]
@@ -31,6 +59,7 @@ export interface IRecord extends IParamountRecordFields {
   output__1_messages: string
   output__1_misc_data: IRecordMiscData
   output__2: number
+  cosine_similarity?: number
 }
 
 interface IParamountRecordFields {

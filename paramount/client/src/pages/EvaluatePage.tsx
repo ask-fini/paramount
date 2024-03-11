@@ -1,13 +1,13 @@
 import { useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { CellValueChangedEvent } from 'ag-grid-community'
 import { AgGridReact } from 'ag-grid-react'
-import DownloadIcon from '@/components/Icons/DownloadIcon.tsx'
-import { AppContext } from '@/context.tsx'
-import SaveIcon from '@/components/Icons/SaveIcon.tsx'
-import { getParamsForExport } from '@/lib/utils.ts'
-import { IRecord } from '@/lib/types.ts'
-import Services from '@/lib/services.ts'
-import PageSkeleton from '@/components/PageSkeleton.tsx'
+import DownloadIcon from '@/components/Icons/DownloadIcon'
+import { AppContext } from '@/context'
+import SaveIcon from '@/components/Icons/SaveIcon'
+import { getParamsForExport } from '@/lib/utils'
+import { IRecord } from '@/lib/types'
+import Services from '@/lib/services'
+import PageSkeleton from '@/components/PageSkeleton'
 import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-quartz.css'
 
@@ -91,7 +91,7 @@ export default function EvaluatePage() {
   // }
 
   return (
-    <div className="ag-theme-quartz h-screen w-screen py-16 p-4 md:p-28">
+    <div className="ag-theme-quartz h-[90vh] w-screen py-10 p-4 md:px-28 md:pb-20">
       {loading ? (
         <PageSkeleton />
       ) : (

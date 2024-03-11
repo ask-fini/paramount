@@ -1,40 +1,13 @@
 import { createContext, useEffect, useState } from 'react'
-import { IRecord, TResult } from '@/lib/types.ts'
+import { IAppState, IRecord, TResult } from '@/lib/types'
 import { ColDef } from 'ag-grid-community'
 import {
   getCellEditorParams,
   getEditableTableHeaders,
   getEvaluateTableHeaders,
-} from '@/lib/utils.ts'
-import { ACCURATE_EVALUTATION, EVALUTATION_HEADER } from '@/lib/constants.ts'
-import Services from '@/lib/services.ts'
-
-interface IAppState {
-  identifier: string
-  setIdentifier: (val: string) => void
-  loading: boolean
-  setLoading: (val: boolean) => void
-  evaluateData: IRecord[]
-  setEvaluateData: (val: IRecord[]) => void
-  evaluateTableHeaders: ColDef[]
-  setEvaluateTableHeaders: (val: ColDef[]) => void
-  optimizeData: IRecord[]
-  setOptimizeData: (val: IRecord[]) => void
-  optimizeTableHeaders: ColDef[]
-  setOptimizeTableHeaders: (val: ColDef[]) => void
-  getEvaluateData: (val: string) => Promise<TResult<any, Error>>
-  getOptimizeData: (val: string) => Promise<TResult<any, Error>>
-  accuracy: number
-  setAccuracy: (val: number) => void
-  handleAccuracyChange: () => void
-  paramountColumns: string[]
-  setParamountColumns: (val: string[]) => void
-  paramountInputColumns: string[]
-  setParamountInputColumns: (val: string[]) => void
-  paramountOutputColumns: string[]
-  setParamountOutputColumns: (val: string[]) => void
-  findParamountColumnHeader: (val: string) => string | null
-}
+} from '@/lib/utils'
+import { ACCURATE_EVALUTATION, EVALUTATION_HEADER } from '@/lib/constants'
+import Services from '@/lib/services'
 
 export const AppContext = createContext<IAppState>({} as IAppState)
 

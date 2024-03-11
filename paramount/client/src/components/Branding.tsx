@@ -1,6 +1,6 @@
 export default function Branding() {
   return (
-    <div className="absolute bottom-3 right-3 text-xs flex items-center">
+    <div className="fixed bottom-3 right-3 text-xs flex items-center z-[-1]">
       Powered by{' '}
       <img
         src="https://storage.googleapis.com/fini-widget-dev/assets/fini.png"

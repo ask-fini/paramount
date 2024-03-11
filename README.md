@@ -8,6 +8,12 @@ Business Evals for LLMs
 
 **Server**
 
+To enter Python Virtual Env
+
+```py
+source venv/bin/activate # and for exiting, deactivate
+```
+
 ```py
 pip install paramount # or python3 -m pip install paramount
 ```
@@ -15,6 +21,7 @@ pip install paramount # or python3 -m pip install paramount
 **Client**
 
 ```py
+cd client
 pnpm i
 ```
 

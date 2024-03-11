@@ -16,7 +16,7 @@ export default function Navbar() {
   }
 
   return (
-    <div className="w-full flex justify-between items-center p-4 md:px-32 fixed top-0">
+    <nav className="w-full flex justify-between items-center p-4 md:px-32">
       <div>
         <Link
           to="/"
@@ -44,6 +44,6 @@ export default function Navbar() {
         value={identifier || 'No Identifier found'}
         readOnly
       />
-    </div>
+    </nav>
   )
 }

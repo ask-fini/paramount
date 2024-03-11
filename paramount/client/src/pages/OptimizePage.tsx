@@ -1,18 +1,20 @@
 import { useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { AgGridReact } from 'ag-grid-react'
-import DownloadIcon from '@/components/Icons/DownloadIcon.tsx'
-import { AppContext } from '@/context.tsx'
+import DownloadIcon from '@/components/Icons/DownloadIcon'
+import { AppContext } from '@/context'
 import {
   findCommonValue,
   getHeadersWithPrefix,
   getParamsForExport,
-} from '@/lib/utils.ts'
-import PageSkeleton from '@/components/PageSkeleton.tsx'
-import Dropdown from '@/components/Dropdown.tsx'
+} from '@/lib/utils'
+import PageSkeleton from '@/components/PageSkeleton'
+import Dropdown from '@/components/Dropdown'
 import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-quartz.css'
-import { IRecord } from '@/lib/types.ts'
-import Services from '@/lib/services.ts'
+import { IRecord } from '@/lib/types'
+import Services from '@/lib/services'
+import { ColDef } from 'ag-grid-community'
+import { COSINE_SIMILARITY } from '@/lib/constants'
 
 export default function OptimizePage() {
   const {
@@ -27,29 +29,55 @@ export default function OptimizePage() {
   } = useContext(AppContext)
 
   const gridRef = useRef<AgGridReact>(null)
+  const bottomScrollRef = useRef<HTMLDivElement>(null)
+
   const [searchKey, setSearchKey] = useState<string>('')
   const [selectedInputParam, setSelectedInputParam] = useState('')
   const [selectedOutputParam, setSelectedOutputParam] = useState('')
   const [commonValue, setCommonValue] = useState('')
   const [testing, setTesting] = useState(false)
-
-  const [cleanTestSet, setCleanTestSet] = useState<IRecord[]>([])
+  const [similarityTestSet, setSimilarityTestSet] = useState<
+    Partial<IRecord>[]
+  >([])
+  const [similarityScore, setSimilarityScore] = useState(0)
+  const [similarityColumns, setSimilarityColumns] = useState<ColDef[]>([])
 
   const onExportClick = useCallback(() => {
     const params = getParamsForExport()
     gridRef.current!.api.exportDataAsCsv(params)
   }, [])
 
-  // function getResultFromColname(result: any, output_col: string) {
-  //   const identifying_info = output_col.split('__')[1].split('_')
-  //   const output_index = parseInt(identifying_info[0]) - 1
-  //   const output_colname =
-  //     identifying_info.length < 2 ? null : identifying_info.slice(1).join('_')
-  //   const data_item = output_colname
-  //     ? result[output_index][output_colname]
-  //     : result[output_index]
-  //   return { output_index, output_colname, data_item }
-  // }
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      bottomScrollRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'end',
+      })
+    }, 200)
+  }
+
+  const getSimilarityTableHeaders = (headers: IRecord): ColDef[] => {
+    return Object.keys(headers).map((header) => {
+      if (header === COSINE_SIMILARITY) {
+        const column: ColDef = {
+          headerName: header,
+          field: header,
+          editable: false,
+        }
+        return column
+      }
+
+      const column: ColDef = {
+        headerName: header.split('__')[1],
+        field: header,
+        editable: false,
+        cellStyle: header.includes('test')
+          ? { backgroundColor: '#2244CC44' }
+          : { backgroundColor: '#cecece' },
+      }
+      return column
+    })
+  }
 
   const onTestClick = async () => {
     setTesting(true)
@@ -57,23 +85,24 @@ export default function OptimizePage() {
       'VITE_OUTPUT_COLS',
       'output__'
     )
-    // const colsToDisplay = [
-    //   ...sessionOutputColumns,
-    //   ...sessionOutputColumns.map((item) => 'test_' + item),
-    // ]
+    const colsToDisplay = [
+      ...sessionOutputColumns,
+      ...sessionOutputColumns.map((item) => 'test_' + item),
+    ]
 
     const foundKey = findParamountColumnHeader(selectedInputParam)
     if (!foundKey) return
 
-    // create new array of object with changing the selectedInputParam value with the most common value
-    const ttt = optimizeData.map((o: IRecord) => ({
+    // Create new array of object with changing the
+    // `selectedInputParam` value with the most common value
+    const formattedOptimizedData = optimizeData.map((o: IRecord) => ({
       ...o,
       [foundKey]: commonValue,
     }))
-    console.log(123, ttt, foundKey)
-    setCleanTestSet(ttt)
 
-    for (const record of ttt) {
+    let cleanTestSet: any = [...formattedOptimizedData]
+
+    for (const [index, record] of formattedOptimizedData.entries()) {
       const { data, error } = await Services.Infer(record, sessionOutputColumns)
       if (error) {
         console.log('infer error: ', error)
@@ -81,40 +110,50 @@ export default function OptimizePage() {
         return
       }
 
-      console.log('infer data: ', data)
+      const response = data.result[0]
+      for (const output_col of sessionOutputColumns) {
+        Object.keys(response).forEach((x) => {
+          if (x.includes(output_col)) {
+            cleanTestSet[index] = { ...cleanTestSet[index], [x]: response[x] }
+          }
+        })
+      }
 
-      // for (const output_col of sessionOutputColumns) {
-      //   const { data_item } = getResultFromColname(data, output_col)
-      //   const aa = ('test_' + output_col) as keyof IRecord
-      //   record[aa] = String(data_item)
-      // }
-
-      // // Prune `cleanTestSet` to include only some columns
-      // const newCleanTestSet = cleanTestSet.map((record) => {
-      //   const newRecord: any = {}
-      //   for (const col of colsToDisplay) {
-      //     newRecord[col] = record[col]
-      //   }
-      //   return newRecord
-      // })
-      // console.log('newCleanTestSet', newCleanTestSet)
-      // setCleanTestSet(newCleanTestSet)
+      // Prune `cleanTestSet` to include only some columns
+      cleanTestSet = cleanTestSet.map((record: IRecord) => {
+        const newRecord: Partial<IRecord> = {}
+        for (const col of colsToDisplay) {
+          newRecord[col as keyof IRecord] = record[col as keyof IRecord]
+        }
+        return newRecord
+      })
     }
 
-    // console.log(123, sessionOutputColumns, colsToDisplay)
-    // setTesting(false)
+    setTesting(false)
 
     // Test set on optimize and infer??
     // NOTE: for the similairty, get the records from infer results and put the selectedOutputParam
-    // const { data, error } = await Services.CheckSimilarity(
-    //   cleanTestSet,
-    //   selectedOutputParam
-    // )
-    // if (error) {
-    //   console.log('similarity error: ', error)
-    //   return
-    // }
-    // console.log('similarity data: ', data)
+    const { data, error } = await Services.CheckSimilarity(
+      cleanTestSet,
+      'output__' + selectedOutputParam
+    )
+    if (error) {
+      console.log('similarity error: ', error)
+      return
+    }
+
+    const similarityScores = data.result
+    let score = 0
+    for (const [index, set] of cleanTestSet.entries()) {
+      set[COSINE_SIMILARITY] = (similarityScores[index] * 100).toFixed(1) + '%'
+      score += similarityScores[index] * 100
+    }
+
+    const columnDefs = getSimilarityTableHeaders(cleanTestSet[0])
+    setSimilarityColumns(columnDefs)
+    setSimilarityScore(Number((score / similarityScores.length).toFixed(2)))
+    setSimilarityTestSet(cleanTestSet)
+    scrollToBottom()
   }
 
   const fetchOptimizeData = async () => {
@@ -127,7 +166,6 @@ export default function OptimizePage() {
     const foundKey = findParamountColumnHeader(selectedInputParam)
     if (!foundKey) return
     const commonValue = findCommonValue(optimizeData, foundKey as keyof IRecord)
-    console.log('found commonValue', commonValue)
     setCommonValue(commonValue)
   }, [
     findParamountColumnHeader,
@@ -144,7 +182,7 @@ export default function OptimizePage() {
   }, [])
 
   return (
-    <div className="ag-theme-quartz h-screen w-screen py-16 p-4 md:p-28">
+    <div className="ag-theme-quartz h-[90vh] w-screen py-10 p-4 md:px-28 md:pb-20">
       {loading ? (
         <PageSkeleton />
       ) : (
@@ -205,6 +243,7 @@ export default function OptimizePage() {
                       rounded-lg p-2 focus:outline-sky-500 shadow-md"
                     value={commonValue}
                     onChange={(e) => setCommonValue(e.target.value)}
+                    spellCheck={false}
                   >
                     {' '}
                     asdfasdf
@@ -225,10 +264,28 @@ export default function OptimizePage() {
               <div className="w-full flex justify-center my-8">
                 {testing && (
                   <div className="border w-full max-w-[600px] h-3 bg-neutral-100 rounded-lg">
-                    <div className="bg-sky-500 w-[250px] h-[10px] rounded-lg" />
+                    <div className="bg-neutral-700 w-[250px] h-[10px] rounded-lg" />
                   </div>
                 )}
               </div>
+              {similarityTestSet.length ? (
+                <div className="flex flex-col justify-center h-[400px] pb-16">
+                  <div className="w-full h-full shadow-lg rounded-xl max-h-[300px]">
+                    <AgGridReact
+                      rowData={similarityTestSet}
+                      columnDefs={similarityColumns}
+                      defaultColDef={{ editable: false, resizable: true }}
+                    />
+                  </div>
+                  <div className="flex flex-col justify-center items-center mt-8">
+                    <p className="font-semibold text-xs">
+                      Average similarity to evaluation
+                    </p>
+                    <span className="text-3xl">{similarityScore}%</span>
+                  </div>
+                </div>
+              ) : null}
+              <div ref={bottomScrollRef} />
             </>
           ) : null}
         </>
