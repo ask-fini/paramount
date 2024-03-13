@@ -2,13 +2,24 @@
 # 	source venv/bin/activate
 
 run-client:
-	@cd client & pnpm dev
+	@cd ./paramount/client/ && pnpm dev
 
 run-server:
 	@gunicorn --bind :9001 --workers 1 --threads 8 --timeout 0 paramount.server.wsgi:app
 
-# run-ui:
-# 	@paramount --server.port 9000
+run: run-server run-client
 
-run:
-	make run-server & make run-client
+build-client:
+	@cd ./paramount/client && pnpm build
+
+docker-build-client:
+	@docker build -t paramount-client -f Dockerfile.client .
+
+docker-run-client:
+	@docker run -dp 3002:3002 paramount-client
+
+docker-build-server:
+	@docker build -t paramount-server -f Dockerfile.server .
+
+docker-run-server:
+	@docker run -dp 9001:9001 paramount-server

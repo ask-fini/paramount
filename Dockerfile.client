@@ -1,0 +1,29 @@
+FROM node:18.17.1-alpine as build
+
+RUN npm install -g pnpm 
+
+WORKDIR /app
+
+COPY ./paramount/client/package.json ./paramount/client/pnpm-lock.yaml ./
+
+RUN pnpm install --frozen-lockfile
+
+COPY ./paramount/paramount.toml ../
+
+COPY ./paramount/client ./
+
+EXPOSE 3002
+
+RUN pnpm run build
+
+ENV APP_ENV="production"
+
+FROM nginx:alpine
+
+# Copy the built React app to Nginx's web server directory
+COPY --from=build /app/dist /usr/share/nginx/html
+
+EXPOSE 3002
+
+# Start Nginx when the container runs
+CMD ["nginx", "-g", "daemon off;"]
