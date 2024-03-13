@@ -82,3 +82,26 @@ Here is the [example toml file](https://github.com/ask-fini/paramount/blob/main/
 - ~~Fix env variables for the client~~ (`.toml` fix)
 - Refactor Dockerfile for the client
 - Allow Flask to serve the static files of the client
+
+
+### pypi upload procedure
+
+prerequisite
+
+```pip install wheel twine```
+
+env vars for auth
+
+```
+export TWINE_USERNAME=__token__
+export TWINE_PASSWORD=<your_pypi_api_token>
+```
+
+build
+
+```python setup.py sdist bdist_wheel```
+
+upload
+
+```twine upload dist/*```
+
