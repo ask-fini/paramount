@@ -1,4 +1,3 @@
-import os
 import pandas as pd
 import numpy as np
 from .db import Database
@@ -7,15 +6,12 @@ from sqlalchemy import create_engine, inspect, Table, MetaData, select, text, de
 from sqlalchemy.dialects.postgresql import JSONB, UUID, TEXT, insert as pg_insert
 from sqlalchemy.exc import SQLAlchemyError
 import psycopg2
-from dotenv import load_dotenv, find_dotenv
 import uuid
-if find_dotenv():
-    load_dotenv()
 
 
 class PostgresDatabase(Database):
-    def __init__(self):  # connection string may need postgresql+psycopg2 as prefix to work
-        self.engine = create_engine(os.getenv('PARAMOUNT_POSTGRES_CONNECTION_STRING'))
+    def __init__(self, connection_string):  # connection string may need postgresql+psycopg2 as prefix to work
+        self.engine = create_engine(connection_string)
         self.existing_tables = {}
 
     def create_or_append(self, dataframe, table_name, primary_key):

@@ -22,5 +22,5 @@ setup(
       'Source Code': 'https://github.com/ask-fini/paramount'
    },
    packages=find_packages(),
-   install_requires=['streamlit', 'pandas', 'pytz', 'flask', 'python-dotenv', 'scikit-learn', 'sqlalchemy', 'psycopg2-binary', 'gunicorn']
+   install_requires=['streamlit', 'pandas', 'pytz', 'flask', 'python-dotenv', 'scikit-learn', 'sqlalchemy', 'psycopg2-binary', 'gunicorn', 'toml']
 )

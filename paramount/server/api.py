@@ -1,4 +1,5 @@
 import os
+import toml
 import pandas as pd
 from flask import Flask, request, jsonify, send_from_directory
 from paramount.server.db_connector import db
@@ -9,11 +10,27 @@ from sklearn.metrics.pairwise import cosine_similarity
 from paramount.server.library_functions import get_result_from_colname
 from datetime import datetime
 
-db_instance = db.get_database()
+
 app = Flask(__name__, static_folder='../client/dist', static_url_path='/')
 
-paramount_identifier_colname = os.getenv('PARAMOUNT_IDENTIFIER_COLNAME')
-base_url = os.getenv('FUNCTION_API_BASE_URL')
+config_path = os.getenv('PARAMOUNT_CONFIG_FILE')
+config = toml.load(config_path)
+
+paramount_identifier_colname = config['api']['identifier_colname']
+base_url = config['record']['function_url']
+db_type = config['db']['type']
+
+connection_string = None
+if db_type in config['db']:
+    db_config = config['db'].get(db_type)
+    if db_config and 'connection_string' in db_config:
+        connection_string = db_config['connection_string']
+
+db_instance = db.get_database(db_type, connection_string)
+
+print(f"paramount_identifier_colname: {paramount_identifier_colname}")
+print(f"base_url: {base_url}")
+print(f"connection_string: {connection_string}")
 
 
 def err_dict(err_type, err_tcb):
@@ -24,10 +41,12 @@ def err_dict(err_type, err_tcb):
 def health():
     return jsonify({"status": "OK", "time": datetime.now()}), 200
 
+
 # Entry route for the client
 @app.route("/")
 def serve():
     return send_from_directory(app.static_folder, "index.html")
+
 
 @app.route('/<path:path>')
 def static_file(path):

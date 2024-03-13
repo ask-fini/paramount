@@ -1,6 +1,6 @@
 import { ACCURATE_EVALUTATION, EVALUTATION_HEADER } from '@/lib/constants.ts'
 import { IRecord } from '@/lib/types.ts'
-import paramountConfig from '../../../paramount.toml'
+import paramountConfig from '../../../../paramount.toml'
 
 function getBoolean(inputSelector: string): boolean {
   return !!(document.querySelector(inputSelector) as HTMLInputElement)?.checked
