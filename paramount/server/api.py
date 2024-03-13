@@ -1,6 +1,6 @@
 import os
 import pandas as pd
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from paramount.server.db_connector import db
 import traceback
 import requests
@@ -10,7 +10,7 @@ from paramount.server.library_functions import get_result_from_colname
 from datetime import datetime
 
 db_instance = db.get_database()
-app = Flask(__name__)
+app = Flask(__name__, static_folder='../client/dist', static_url_path='/')
 
 paramount_identifier_colname = os.getenv('PARAMOUNT_IDENTIFIER_COLNAME')
 base_url = os.getenv('FUNCTION_API_BASE_URL')
@@ -23,6 +23,15 @@ def err_dict(err_type, err_tcb):
 @app.route('/health', methods=['GET'])
 def health():
     return jsonify({"status": "OK", "time": datetime.now()}), 200
+
+# Entry route for the client
+@app.route("/")
+def serve():
+    return send_from_directory(app.static_folder, "index.html")
+
+@app.route('/<path:path>')
+def static_file(path):
+    return app.send_static_file(path)
 
 
 # For disabling CORS
