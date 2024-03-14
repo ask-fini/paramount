@@ -13,7 +13,7 @@ from datetime import datetime
 
 app = Flask(__name__, static_folder='../client/dist', static_url_path='/')
 
-config_path = os.getenv('PARAMOUNT_CONFIG_FILE')
+config_path = os.getenv('PARAMOUNT_CONFIG_FILE', 'paramount.toml')  # Default: paramount.toml at root
 config = toml.load(config_path)
 
 paramount_identifier_colname = config['api']['identifier_colname']
