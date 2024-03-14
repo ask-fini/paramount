@@ -4,7 +4,7 @@ import path from 'path'
 import { ViteToml } from 'vite-plugin-toml'
 
 export default defineConfig(({ mode }) => {
-  const envPath = path.join(__dirname, './')
+  const envPath = path.join(__dirname, '../../')
   const env = loadEnv(mode, envPath, '')
 
   return {
@@ -19,14 +19,13 @@ export default defineConfig(({ mode }) => {
     server: {
       host: true,
       port: 3002,
-      // Example proxy configuration for the server conn, if needed
-      // proxy: {
-      //   '/api': {
-      //     target: 'http://jsonplaceholder.typicode.com',
-      //     changeOrigin: true,
-      //     rewrite: (path) => path.replace(/^\/api/, ''),
-      //   },
-      // },
+      proxy: {
+        '/api': {
+          target: env.PARAMOUNT_API_ENDPOINT,
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api/, ''),
+        },
+      },
     },
   }
 })

@@ -31,6 +31,7 @@ db_instance = db.get_database(db_type, connection_string)
 print(f"paramount_identifier_colname: {paramount_identifier_colname}")
 print(f"base_url: {base_url}")
 print(f"connection_string: {connection_string}")
+print(f"db type: {db_type}")
 
 
 def err_dict(err_type, err_tcb):
@@ -63,7 +64,7 @@ def after_request(response):
     return response
 
 
-@app.route('/config', methods=['GET'])
+@app.route('/api/config', methods=['GET'])
 def get_client_config():
     try:
         ui_config = config['ui']
@@ -73,7 +74,7 @@ def get_client_config():
         return jsonify(err_obj), 500
 
 
-@app.route('/latest', methods=['POST'])
+@app.route('/api/latest', methods=['POST'])
 def latest():
     data = request.get_json()
     try:
@@ -104,7 +105,7 @@ def latest():
     return jsonify(response_data), 200
 
 
-@app.route('/submit_evaluations', methods=['POST'])
+@app.route('/api/submit_evaluations', methods=['POST'])
 def submit_evaluations():
     data = request.get_json()
     try:
@@ -123,7 +124,7 @@ def submit_evaluations():
     return jsonify({"success": True}), 200
 
 
-@app.route('/infer', methods=['POST'])
+@app.route('/api/infer', methods=['POST'])
 def infer():
     data = request.get_json()
     print(data)
@@ -154,7 +155,7 @@ def infer():
     return jsonify({"result": result}), 200
 
 
-@app.route('/similarity', methods=['POST'])
+@app.route('/api/similarity', methods=['POST'])
 def similarity():
     data = request.get_json()
     try:

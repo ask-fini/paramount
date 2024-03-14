@@ -29,7 +29,7 @@ def get_database(database_type, connection_string=None):
     if database_type in dbdict:
         print(f"Using database type: {database_type}, for paramount ground truth recordings")
         if database_type == 'postgres':
-            dbdict[database_type](connection_string)
+            return dbdict[database_type](connection_string)
         else:
             return dbdict[database_type]()
     else:

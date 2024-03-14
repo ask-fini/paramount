@@ -77,6 +77,34 @@ export function getHeadersFromToml(header: string, prefix: string): string[] {
   return paramountConfig['ui'][header].map((c: string) => prefix + c)
 }
 
+export function getEvaluateTableHeadersFromConfig(
+  config: Record<string, string[]>
+): string[] {
+  return [
+    EVALUTATION_HEADER,
+    ...getHeadersFromConfig(config, 'meta_cols', 'paramount__'),
+    ...getHeadersFromConfig(config, 'input_cols', 'input_'),
+    ...getHeadersFromConfig(config, 'output_cols', 'output__'),
+  ]
+}
+
+export function getEditableTableHeadersFromConfig(
+  config: Record<string, string[]>
+): string[] {
+  return [
+    ...getHeadersFromConfig(config, 'output_cols', 'output__'),
+    EVALUTATION_HEADER,
+  ]
+}
+
+export function getHeadersFromConfig(
+  config: Record<string, string[]>,
+  header: string,
+  prefix: string
+): string[] {
+  return config[header].map((c: string) => prefix + c)
+}
+
 export function getCellEditorParams(): { values: string[] } {
   return {
     values: [

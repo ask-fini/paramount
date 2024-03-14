@@ -1,15 +1,35 @@
 import { ILatestDataResult, IRecord, TResult } from '@/lib/types.ts'
 
-// TODO: change this after fixing env variable issue
-const API_URL = 'http://localhost:9001'
+// Uncomment this if will deploy the client and the server
+// separately and add this prefix to the endpoints
+// const API_URL = import.meta.env.VITE_API_ENDPOINT
 
 export default class Services {
+  static async GetConfig(): Promise<TResult<Record<string, string[]>, Error>> {
+    const response = await fetch(`/api/config`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (response.ok) {
+      const res = await response.json()
+      return {
+        data: res,
+        error: null,
+      }
+    }
+
+    return { error: new Error(''), data: null }
+  }
+
   static async GetLatestData(
     identifier: string,
     evaluatedRowsOnly?: boolean
   ): Promise<TResult<ILatestDataResult, Error>> {
     // TODO: what to do with env vars? need VITE prefix
-    const response = await fetch(`${API_URL}/latest`, {
+    const response = await fetch(`/api/latest`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -36,7 +56,7 @@ export default class Services {
     data: any
   ): Promise<TResult<ILatestDataResult, Error>> {
     // TODO: what to do with env vars? need VITE prefix
-    const response = await fetch(`${API_URL}/submit_evaluations`, {
+    const response = await fetch(`/api/submit_evaluations`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -62,7 +82,7 @@ export default class Services {
     record: IRecord,
     outputColumns: string[]
   ): Promise<TResult<any, Error>> {
-    const response = await fetch(`${API_URL}/infer`, {
+    const response = await fetch(`/api/infer`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -87,7 +107,7 @@ export default class Services {
     records: any[],
     outputColumnToBeTested: string
   ): Promise<TResult<any, Error>> {
-    const response = await fetch(`${API_URL}/similarity`, {
+    const response = await fetch(`/api/similarity`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

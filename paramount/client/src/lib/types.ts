@@ -6,6 +6,8 @@ export type TResult<T, K> = Success<T> | Failure<K>
 export interface IAppState {
   identifier: string
   setIdentifier: (val: string) => void
+  config: Record<string, string[]>
+  setConfig: (val: Record<string, string[]>) => void
   loading: boolean
   setLoading: (val: boolean) => void
   evaluateData: IRecord[]

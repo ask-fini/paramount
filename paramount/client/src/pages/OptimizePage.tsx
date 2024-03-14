@@ -4,7 +4,7 @@ import DownloadIcon from '@/components/Icons/DownloadIcon'
 import { AppContext } from '@/context'
 import {
   findCommonValue,
-  getHeadersFromToml,
+  getHeadersFromConfig,
   getParamsForExport,
 } from '@/lib/utils'
 import PageSkeleton from '@/components/PageSkeleton'
@@ -18,6 +18,7 @@ import { COSINE_SIMILARITY } from '@/lib/constants'
 
 export default function OptimizePage() {
   const {
+    config,
     optimizeData,
     optimizeTableHeaders,
     getOptimizeData,
@@ -81,7 +82,11 @@ export default function OptimizePage() {
 
   const onTestClick = async () => {
     setTesting(true)
-    const sessionOutputColumns = getHeadersFromToml('output_cols', 'output__')
+    const sessionOutputColumns = getHeadersFromConfig(
+      config,
+      'output_cols',
+      'output__'
+    )
     const colsToDisplay = [
       ...sessionOutputColumns,
       ...sessionOutputColumns.map((item) => 'test_' + item),

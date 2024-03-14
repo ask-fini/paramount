@@ -3,8 +3,8 @@ import { IAppState, IRecord, TResult } from '@/lib/types'
 import { ColDef } from 'ag-grid-community'
 import {
   getCellEditorParams,
-  getEditableTableHeadersFromToml,
-  getEvaluateTableHeadersFromToml,
+  getEditableTableHeadersFromConfig,
+  getEvaluateTableHeadersFromConfig,
 } from '@/lib/utils'
 import { ACCURATE_EVALUTATION, EVALUTATION_HEADER } from '@/lib/constants'
 import Services from '@/lib/services'
@@ -15,6 +15,7 @@ const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [identifier, setIdentifier] = useState('')
+  const [config, setConfig] = useState<Record<string, string[]>>({})
   const [loading, setLoading] = useState<boolean>(false)
   const [accuracy, setAccuracy] = useState<number>(0)
   // Original, untouched columns
@@ -36,7 +37,14 @@ const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
     if (foundIdentifier) {
       setIdentifier(foundIdentifier)
     }
+    getConfig()
   }, [])
+
+  const getConfig = async () => {
+    const { data, error } = await Services.GetConfig()
+    if (error) return
+    setConfig(data)
+  }
 
   const getEvaluateData = async (
     identifier: string
@@ -48,8 +56,8 @@ const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
       return { data: null, error }
     }
 
-    const editableColumns = getEditableTableHeadersFromToml()
-    const headers = getEvaluateTableHeadersFromToml()
+    const editableColumns = getEditableTableHeadersFromConfig(config)
+    const headers = getEvaluateTableHeadersFromConfig(config)
     const columnDefs = headers.map((header) => {
       const isEditable = editableColumns.includes(header)
       const column: ColDef = {
@@ -149,6 +157,8 @@ const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
       value={{
         identifier,
         setIdentifier,
+        config,
+        setConfig,
         loading,
         setLoading,
         evaluateData,

@@ -39,6 +39,8 @@ Health Check: `localhost:9001/health`
 
 **Client**
 
+For better development experience, make sure uncomment the `API_URL` constant inside `services.ts` and add it to every endpoint.
+
 ```py
 cd client
 pnpm dev  # or make run-client
@@ -72,6 +74,7 @@ PARAMOUNT_API_ENDPOINT="http://localhost:9001"
 PARAMOUNT_CONFIG_FILE=
 APP_ENV=development
 
+VITE_API_ENDPOINT="http://localhost:9001"
 VITE_META_COLS="["recorded_at"]"
 VITE_INPUT_COLS="["args__message_history", "args__new_question"]"
 VITE_OUTPUT_COLS="["1_answer", "1_based_on"]"

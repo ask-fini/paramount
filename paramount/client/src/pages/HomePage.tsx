@@ -48,7 +48,7 @@ export default function HomePage() {
             style={{
               padding: '1.05882rem .94118rem',
               height: '3.3em',
-              borderRadius: 12,
+              borderRadius: 16,
               maxWidth: 480,
             }}
             disabled={loading}
@@ -62,11 +62,11 @@ export default function HomePage() {
           <div
             className="absolute bg-neutral-700 text-white rounded-lg flex items-center justify-center"
             style={{
-              height: '2.4rem',
-              width: '2.9rem',
-              borderRadius: 8,
-              top: 4,
-              right: 14,
+              height: '46.2px',
+              width: '3.3rem',
+              borderRadius: '0px 16px 16px 0px',
+              top: 0,
+              right: 10,
             }}
           >
             <button
