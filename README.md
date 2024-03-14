@@ -69,6 +69,7 @@ PARAMOUNT_INPUT_COLS="['args__message_history', 'args__new_question']"
 PARAMOUNT_OUTPUT_COLS="['1_answer', '1_based_on']"
 PARAMOUNT_IS_LIVE="TRUE"
 PARAMOUNT_API_ENDPOINT="http://localhost:9001"
+PARAMOUNT_CONFIG_FILE=
 APP_ENV=development
 
 VITE_META_COLS="["recorded_at"]"
@@ -79,6 +80,8 @@ VITE_OUTPUT_COLS="["1_answer", "1_based_on"]"
 #### Using `.toml` file
 
 You can access the variables on client like this;
+
+**NOTE**: `.toml` file should be accessed from either on the root path or from the `PARAMOUNT_CONFIG_FILE` path.
 
 ```ts
 import paramountConfig from "./paramount.toml";
@@ -115,12 +118,11 @@ docker run -dp 9001:9001 paramount-server # or make docker-run-server
 - ~~Allow Flask to serve the static files of the client~~
 - Check the `.env` file access from Docker, add a prod check for the absolute path
 
-
 ### pypi upload procedure
 
 prerequisite
 
-```pip install wheel twine```
+`pip install wheel twine`
 
 env vars for auth
 
@@ -131,9 +133,8 @@ export TWINE_PASSWORD=<your_pypi_api_token>
 
 build
 
-```python setup.py sdist bdist_wheel```
+`python setup.py sdist bdist_wheel`
 
 upload
 
-```twine upload dist/*```
-
+`twine upload dist/*`

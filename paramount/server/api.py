@@ -63,6 +63,16 @@ def after_request(response):
     return response
 
 
+@app.route('/config', methods=['GET'])
+def get_client_config():
+    try:
+        ui_config = config['ui']
+        return jsonify(ui_config), 200
+    except Exception as e:
+        err_obj = {"error": err_dict(f"{type(e).__name__}: {e}", traceback.format_exc())}
+        return jsonify(err_obj), 500
+
+
 @app.route('/latest', methods=['POST'])
 def latest():
     data = request.get_json()
