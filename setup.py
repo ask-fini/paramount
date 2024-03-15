@@ -8,7 +8,7 @@ with open(os.path.join(this_directory, 'README.md'), encoding='utf-8') as f:
 
 setup(
    name='paramount',
-   version='0.2.3',
+   version='0.2.4',
    description='Business Evals for LLMs',
    long_description=long_description,
    long_description_content_type='text/markdown',
@@ -22,5 +22,5 @@ setup(
       'Source Code': 'https://github.com/ask-fini/paramount'
    },
    packages=find_packages(),
-   install_requires=['streamlit', 'pandas', 'pytz', 'flask', 'python-dotenv', 'scikit-learn', 'sqlalchemy', 'psycopg2-binary', 'gunicorn', 'toml']
+   install_requires=['pandas', 'pytz', 'flask', 'python-dotenv', 'scikit-learn', 'sqlalchemy', 'psycopg2-binary', 'gunicorn', 'toml']
 )
