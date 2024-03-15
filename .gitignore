@@ -73,3 +73,6 @@ paramount_*.csv
 
 # In order to not include actual toml file with sensitive data
 paramount.toml
+
+# To not gitignore */client/dist folder
+!*/client/dist/
