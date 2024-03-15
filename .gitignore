@@ -6,7 +6,7 @@ __pycache__/
 # Distribution / packaging
 .Python
 build/
-dist/
+/dist/
 *.egg-info/
 *.egg
 MANIFEST
@@ -75,4 +75,4 @@ paramount_*.csv
 paramount.toml
 
 # To not gitignore */client/dist folder
-!*/client/dist/
+!**/client/dist/
