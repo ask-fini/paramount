@@ -108,22 +108,26 @@ class PostgresDatabase(Database):
             print(f"{e}: {err_tcb}")
             raise
 
-    def get_table(self, table_name, all_rows, identifier_column_name, identifier_value):
+    def get_table(self, table_name, evaluated_rows_only, split_by_id, identifier_column_name=None,
+                  identifier_value=None):
         metadata = MetaData()
         table = Table(table_name, metadata, autoload_with=self.engine)
         table_dtypes = {column.name: str(column.type) for column in table.columns}
 
-        identifier_column = table.c[identifier_column_name]  # Get the column to filter on
+        conditions = []
+
+        if split_by_id:
+            identifier_column = table.c[identifier_column_name]  # Get the column to filter on
+            # ID-based filtering, uses SQLAlchemy == operator overload (does not evaluate to [True] or [False])
+            conditions.append(identifier_column == identifier_value)
+
+        if evaluated_rows_only:  # e.g. fetch only rows where the evaluation is not empty string: ''
+            conditions.append(table.c.paramount__evaluation.notilike(''))
 
         # Prepare the select statement with a where clause
         stmt = (
             select(table)
-            .where(
-                and_(
-                    identifier_column == identifier_value,  # SQLAlchemy overloads == operator to run it
-                    True if all_rows else table.c.paramount__evaluation.notilike('')  # notilike: gets only eval'd rows
-                )
-            )
+            .where(and_(*conditions))  # Unpack the conditions list into and_()
             .order_by(desc('paramount__recorded_at'))
             .limit(100)
         )
@@ -142,5 +146,5 @@ class PostgresDatabase(Database):
 
             # Attempt to convert any JSONB/JSON column types from the table into either list or dict
             json_cols = [col for col, dtype in table_dtypes.items() if dtype in ['JSONB', 'JSON']]
-            df.update(df[json_cols].applymap(try_literal_eval))
+            df.update(df[json_cols].map(try_literal_eval))
             return df

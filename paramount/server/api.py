@@ -19,6 +19,7 @@ config = toml.load(config_path)
 paramount_identifier_colname = config['api']['identifier_colname']
 base_url = config['record']['function_url']
 db_type = config['db']['type']
+split_by_id = config['api']['split_by_id']
 
 connection_string = None
 if db_type in config['db']:
@@ -30,8 +31,9 @@ db_instance = db.get_database(db_type, connection_string)
 
 print(f"paramount_identifier_colname: {paramount_identifier_colname}")
 print(f"Function replay base_url: {base_url}")
-print(f"DB connection string length: {len(connection_string)} characters")
+print(f"DB connection string length: {len(connection_string)} characters")  # Don't print the actual str: security risk
 print(f"db type: {db_type}")
+print(f"split by id: {split_by_id}")
 
 
 def err_dict(err_type, err_tcb):
@@ -79,17 +81,27 @@ def latest():
     data = request.get_json()
     try:
         ground_truth_table_name = 'paramount_data'
-        company_uuid = str(data['company_uuid'])  # TODO: Why did I hardcode this? supposed to be via config..
+
+        if split_by_id:
+            if 'identifier_value' in data:
+                identifier_value = str(data['identifier_value'])
+            else:
+                raise ValueError('split_by_id is True, so you must provide identifier_value to split by in json body')
+            determined_id_colname = paramount_identifier_colname
+        else:
+            identifier_value = None
+            determined_id_colname = None
+
         evaluated_rows_only = bool(data.get('evaluated_rows_only', False))
-        all_rows = not evaluated_rows_only
         response_data = {"result": None, "column_order": []}
 
         # TODO: Only get non-error rows. Possible by passing "output cols that are supposed to be non-null" to read_df
         # eg. PARAMOUNT_OUTPUT_COLS env var, to get_table() fct: can tell _and() clause that those cols must be non-null
         if db_instance.table_exists(ground_truth_table_name):
-            read_df = db_instance.get_table(ground_truth_table_name, all_rows=all_rows,
-                                            identifier_value=company_uuid,
-                                            identifier_column_name=paramount_identifier_colname)
+            read_df = db_instance.get_table(ground_truth_table_name, evaluated_rows_only=evaluated_rows_only,
+                                            split_by_id=split_by_id,
+                                            identifier_value=identifier_value,
+                                            identifier_column_name=determined_id_colname)
             # Convert the DataFrame into a dictionary with records orientation to properly format it for JSON
             # Doing None Cleaning: Otherwise None becomes 'None' and UUID upsert fails (UUID col does not accept 'None')
             # TODO: Ideally, need for cleaning would be prevented upstream, so that 'None' never happens to begin with..
