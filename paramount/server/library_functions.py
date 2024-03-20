@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 from paramount.server.db_connector import db
 import uuid
+import toml
+import os
 
 
 @st.cache_resource
@@ -15,6 +17,46 @@ def large_centered_button(text, on_click=None, args=None):
     st.markdown("<style>div.row-widget.stButton { display: flex; justify-content: center; }</style>",
                 unsafe_allow_html=True)
     return st.button(text, on_click=on_click, args=args)
+
+
+def load_config():
+    config_path = os.getenv('PARAMOUNT_CONFIG_FILE', 'paramount.toml')  # Default: paramount.toml at root
+
+    # Check if the configuration file exists
+    if not os.path.exists(config_path):
+        print(f"paramount.toml was not found at current working directory. Creating it with default values.")
+        # If the file does not exist, create it with the default configuration
+        with open(config_path, 'w') as config_file:
+            toml.dump(default_config(), config_file)
+
+    return toml.load(config_path)
+
+
+def default_config():
+    default = {
+        "record": {
+            "enabled": True,
+            "function_url": "http://localhost:9000"
+        },
+        "db": {
+            "type": "csv",
+            "postgres": {
+                "connection_string": ""
+            }
+        },
+        "api": {
+            "endpoint": "http://localhost",
+            "port": 9001,
+            "split_by_id": False,
+            "identifier_colname": ""
+        },
+        "ui": {
+            "meta_cols": [''],
+            "input_cols": [''],
+            "output_cols": ['']
+        }
+    }
+    return default
 
 
 def get_result_from_colname(result, output_col):

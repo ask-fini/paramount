@@ -2,12 +2,19 @@ import subprocess
 import webbrowser
 import threading
 import time
+from paramount.server.library_functions import load_config
+
+config = load_config()
+endpoint = config['api']['endpoint']
+port = config['api']['port']
+url = f"{endpoint}:{port}"
+print(f"Running on url: {url}")
 
 
 def start_gunicorn():
     gunicorn_command = [
         "gunicorn",
-        "--bind", ":9001",
+        "--bind", f":{port}",
         "--workers", "1",
         "--threads", "8",
         "--timeout", "0",
@@ -27,7 +34,6 @@ def main():
     time.sleep(3)  # Adjust the sleep time if necessary
 
     # Open the browser to the specified localhost port
-    url = "http://localhost:9001"  # TODO: Set this from toml / env
     print(f"Opening the browser for {url}...")
     webbrowser.open(url)
 

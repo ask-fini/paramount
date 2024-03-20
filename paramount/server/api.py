@@ -7,21 +7,20 @@ import traceback
 import requests
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-from paramount.server.library_functions import get_result_from_colname
+from paramount.server.library_functions import get_result_from_colname, load_config
 from datetime import datetime
 
 
 app = Flask(__name__, static_folder='../client/dist', static_url_path='/')
 
-config_path = os.getenv('PARAMOUNT_CONFIG_FILE', 'paramount.toml')  # Default: paramount.toml at root
-config = toml.load(config_path)
+config = load_config()
 
 paramount_identifier_colname = config['api']['identifier_colname']
 base_url = config['record']['function_url']
 db_type = config['db']['type']
 split_by_id = config['api']['split_by_id']
 
-connection_string = None
+connection_string = ""
 if db_type in config['db']:
     db_config = config['db'].get(db_type)
     if db_config and 'connection_string' in db_config:
