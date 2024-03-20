@@ -129,7 +129,7 @@ class PostgresDatabase(Database):
                 and not df[col].dropna().empty  # Ensure non-empty
                 and isinstance(df[col].dropna().iloc[0], uuid.UUID)  # Check for UUID type
             ]
-            print(uuid_cols)
+            print(f"UUID COLS: {uuid_cols}")
             df[uuid_cols] = df[uuid_cols].astype(str)
 
             return df
