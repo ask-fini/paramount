@@ -7,6 +7,14 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID, TEXT, insert as pg_inser
 from sqlalchemy.exc import SQLAlchemyError
 import psycopg2
 import uuid
+import ast
+
+
+def try_literal_eval(x):
+    try:
+        return ast.literal_eval(x) if isinstance(x, str) else x
+    except (ValueError, SyntaxError):
+        return x
 
 
 class PostgresDatabase(Database):
@@ -103,6 +111,7 @@ class PostgresDatabase(Database):
     def get_table(self, table_name, all_rows, identifier_column_name, identifier_value):
         metadata = MetaData()
         table = Table(table_name, metadata, autoload_with=self.engine)
+        table_dtypes = {column.name: str(column.type) for column in table.columns}
 
         identifier_column = table.c[identifier_column_name]  # Get the column to filter on
 
@@ -129,7 +138,9 @@ class PostgresDatabase(Database):
                 and not df[col].dropna().empty  # Ensure non-empty
                 and isinstance(df[col].dropna().iloc[0], uuid.UUID)  # Check for UUID type
             ]
-            print(f"UUID COLS: {uuid_cols}")
             df[uuid_cols] = df[uuid_cols].astype(str)
 
+            # Attempt to convert any JSONB/JSON column types from the table into either list or dict
+            json_cols = [col for col, dtype in table_dtypes.items() if dtype in ['JSONB', 'JSON']]
+            df.update(df[json_cols].applymap(try_literal_eval))
             return df
