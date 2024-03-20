@@ -30,6 +30,7 @@ db_instance = db.get_database(db_type, connection_string)
 
 print(f"paramount_identifier_colname: {paramount_identifier_colname}")
 print(f"Function replay base_url: {base_url}")
+print(f"DB connection string length: {len(connection_string)} characters")
 print(f"db type: {db_type}")
 
 
