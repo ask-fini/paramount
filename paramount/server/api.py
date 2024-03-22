@@ -1,10 +1,11 @@
-import os
-import toml
 import pandas as pd
 from flask import Flask, request, jsonify, send_from_directory
 from paramount.server.db_connector import db
 import traceback
 import requests
+import uuid
+import pytz
+import threading
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from paramount.server.library_functions import get_result_from_colname, load_config
@@ -75,32 +76,37 @@ def get_client_config():
         return jsonify(err_obj), 500
 
 
+def check_id_splitter(data):
+    if split_by_id:
+        if 'identifier_value' in data:
+            identifier_value = str(data['identifier_value'])
+        else:
+            raise ValueError('split_by_id is True, so you must provide identifier_value to split by in json body')
+        determined_id_colname = paramount_identifier_colname
+    else:
+        identifier_value = None
+        determined_id_colname = None
+    return identifier_value, determined_id_colname
+
+
 @app.route('/api/latest', methods=['POST'])
 def latest():
     data = request.get_json()
     try:
         ground_truth_table_name = 'paramount_data'
 
-        if split_by_id:
-            if 'identifier_value' in data:
-                identifier_value = str(data['identifier_value'])
-            else:
-                raise ValueError('split_by_id is True, so you must provide identifier_value to split by in json body')
-            determined_id_colname = paramount_identifier_colname
-        else:
-            identifier_value = None
-            determined_id_colname = None
+        identifier_value, determined_id_colname = check_id_splitter(data)
 
         evaluated_rows_only = bool(data.get('evaluated_rows_only', False))
         response_data = {"result": None, "column_order": []}
 
         # TODO: Only get non-error rows. Possible by passing "output cols that are supposed to be non-null" to read_df
-        # eg. PARAMOUNT_OUTPUT_COLS env var, to get_table() fct: can tell _and() clause that those cols must be non-null
+        # eg. PARAMOUNT_OUTPUT_COLS env var, to get_recordings() fct: can tell _and() clause that cols must be non-null
         if db_instance.table_exists(ground_truth_table_name):
-            read_df = db_instance.get_table(ground_truth_table_name, evaluated_rows_only=evaluated_rows_only,
-                                            split_by_id=split_by_id,
-                                            identifier_value=identifier_value,
-                                            identifier_column_name=determined_id_colname)
+            read_df = db_instance.get_recordings(ground_truth_table_name, evaluated_rows_only=evaluated_rows_only,
+                                                 split_by_id=split_by_id,
+                                                 identifier_value=identifier_value,
+                                                 identifier_column_name=determined_id_colname)
             # Convert the DataFrame into a dictionary with records orientation to properly format it for JSON
             # Doing None Cleaning: Otherwise None becomes 'None' and UUID upsert fails (UUID col does not accept 'None')
             # TODO: Ideally, need for cleaning would be prevented upstream, so that 'None' never happens to begin with..
@@ -120,6 +126,7 @@ def latest():
 def submit_evaluations():
     data = request.get_json()
     try:
+        # Save updated recordings
         ground_truth_table_name = 'paramount_data'
         updated_records = list(data['updated_records'])
         merged = pd.DataFrame(updated_records)
@@ -127,12 +134,57 @@ def submit_evaluations():
         # Currently not done as this db action only succeeds if there is a valid reference to paramount__recording_id
         # Which a potential attacker normally wouldn't have access to
         db_instance.update_ground_truth(merged, ground_truth_table_name)
+
+        # Save new session
+        sessions_table_name = 'paramount_sessions'
+        session_accuracy = float(data.get('session_accuracy', 0))
+        if session_accuracy > 1 or session_accuracy < 0:
+            raise ValueError('Accuracy must be a float value between 0 and 1 inclusive')
+        session_name = str(data.get('session_name', "Unnamed session"))
+        recorded_ids = list(data['recorded_ids'])
+        session_id = str(uuid.uuid4())
+        timestamp_now = datetime.now(pytz.timezone('UTC')).replace(microsecond=0).isoformat()
+        id_splitter = None
+        if split_by_id:
+            id_splitter = str(data['identifier_value'])
+        session_data = {
+            'paramount__session_id': session_id,
+            'paramount__session_timestamp': timestamp_now,
+            'paramount__session_recorded_ids': recorded_ids,
+            'paramount__session_accuracy': session_accuracy,
+            'paramount__session_name': session_name,
+            'paramount__session_splitter_id': id_splitter
+        }
+        df = pd.DataFrame([session_data])
+        ts_col = 'paramount__session_timestamp'
+        df[ts_col] = pd.to_datetime(df[ts_col])  # To ensure correct dtype: timestamptz, upon table creation
+        # Fire and forget for this heavy operation
+        threading.Thread(target=db_instance.create_or_append,
+                         args=(df, sessions_table_name, 'paramount__session_id'), daemon=True).start()
+        print(f"Saving session {session_id} with acc: {round(100*session_accuracy,1)}%, and splitter id: {id_splitter}")
     except Exception as e:
         err_obj = {"error": err_dict(f"{type(e).__name__}: {e}", traceback.format_exc())}
         print(err_obj)
         return jsonify(err_obj), 500
 
     return jsonify({"success": True}), 200
+
+
+@app.route('/api/get_sessions', methods=['POST'])
+def get_sessions():
+    data = request.get_json()
+    try:
+        sessions_table_name = 'paramount_sessions'
+        identifier_value, _ = check_id_splitter(data)
+        all_sessions = db_instance.get_sessions(sessions_table_name, split_by_id=split_by_id,
+                                                identifier_value=identifier_value,
+                                                identifier_column_name='paramount__session_splitter_id')
+    except Exception as e:
+        err_obj = {"error": err_dict(f"{type(e).__name__}: {e}", traceback.format_exc())}
+        print(err_obj)
+        return jsonify(err_obj), 500
+
+    return jsonify(all_sessions.to_dict(orient='records')), 200
 
 
 @app.route('/api/infer', methods=['POST'])

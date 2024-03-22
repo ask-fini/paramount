@@ -19,5 +19,11 @@ class CSVDatabase(Database):
     def update_ground_truth(self, df, table_name):
         df.to_csv(table_name+'.csv', index=False)
 
-    def get_table(self, table_name, evaluated_rows_only, split_by_id, identifier_column_name=None, identifier_value=None):
+    def get_recordings(self, table_name, evaluated_rows_only, split_by_id, identifier_column_name=None,
+                       identifier_value=None):
+        # TODO: Implement splitter/id logic. Skipped for now as CSV assumed to be localhost
+        return pd.read_csv(table_name+'.csv')
+
+    def get_sessions(self, table_name, split_by_id, identifier_column_name, identifier_value):
+        # TODO: Implement splitter/id logic. Skipped for now as CSV assumed to be localhost
         return pd.read_csv(table_name+'.csv')

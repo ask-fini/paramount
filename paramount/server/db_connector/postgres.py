@@ -108,11 +108,49 @@ class PostgresDatabase(Database):
             print(f"{e}: {err_tcb}")
             raise
 
-    def get_table(self, table_name, evaluated_rows_only, split_by_id, identifier_column_name=None,
-                  identifier_value=None):
+    def get_generic_table(self, table, stmt):
+        table_dtypes = {column.name: str(column.type) for column in table.columns}
+        with self.engine.connect() as conn:
+            df = pd.read_sql(stmt, conn)
+
+            # Convert UUID cols to str so Evaluate.py merged df has a successful right join on 'paramount__record_id'
+            uuid_cols = [
+                col for col in df.columns
+                if df[col].dtype == 'object'
+                   and not df[col].dropna().empty  # Ensure non-empty
+                   and isinstance(df[col].dropna().iloc[0], uuid.UUID)  # Check for UUID type
+            ]
+            df[uuid_cols] = df[uuid_cols].astype(str)
+
+            # Attempt to convert any JSONB/JSON column types from the table into either list or dict
+            json_cols = [col for col, dtype in table_dtypes.items() if dtype in ['JSONB', 'JSON']]
+            df.update(df[json_cols].applymap(try_literal_eval))
+            return df
+
+    def get_sessions(self, table_name, split_by_id, identifier_column_name, identifier_value):
         metadata = MetaData()
         table = Table(table_name, metadata, autoload_with=self.engine)
-        table_dtypes = {column.name: str(column.type) for column in table.columns}
+
+        conditions = []
+
+        if split_by_id:
+            identifier_column = table.c[identifier_column_name]  # Get the column to filter on
+            # ID-based filtering, uses SQLAlchemy == operator overload (does not evaluate to [True] or [False])
+            conditions.append(identifier_column == identifier_value)
+
+        # Prepare the select statement with a where clause
+        stmt = (
+            select(table)
+            .where(and_(*conditions))  # Unpack the conditions list into and_()
+            .order_by(desc('paramount__session_timestamp'))
+        )
+        df = self.get_generic_table(table, stmt)
+        return df
+
+    def get_recordings(self, table_name, evaluated_rows_only, split_by_id, identifier_column_name=None,
+                       identifier_value=None):
+        metadata = MetaData()
+        table = Table(table_name, metadata, autoload_with=self.engine)
 
         conditions = []
 
@@ -131,20 +169,6 @@ class PostgresDatabase(Database):
             .order_by(desc('paramount__recorded_at'))
             .limit(100)
         )
-        with self.engine.connect() as conn:
-            df = pd.read_sql(stmt, conn)
-            df['paramount__evaluation'] = df['paramount__evaluation'].replace("", None)
-
-            # Convert UUID cols to str so Evaluate.py merged df has a successful right join on 'paramount__record_id'
-            uuid_cols = [
-                col for col in df.columns
-                if df[col].dtype == 'object'
-                and not df[col].dropna().empty  # Ensure non-empty
-                and isinstance(df[col].dropna().iloc[0], uuid.UUID)  # Check for UUID type
-            ]
-            df[uuid_cols] = df[uuid_cols].astype(str)
-
-            # Attempt to convert any JSONB/JSON column types from the table into either list or dict
-            json_cols = [col for col, dtype in table_dtypes.items() if dtype in ['JSONB', 'JSON']]
-            df.update(df[json_cols].applymap(try_literal_eval))
-            return df
+        df = self.get_generic_table(table, stmt)
+        df['paramount__evaluation'] = df['paramount__evaluation'].replace("", None)
+        return df

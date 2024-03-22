@@ -16,7 +16,11 @@ class Database(ABC):
         pass
 
     @abstractmethod
-    def get_table(self, table_name, evaluated_rows_only, split_by_id, identifier_column_name, identifier_value):
+    def get_recordings(self, table_name, evaluated_rows_only, split_by_id, identifier_column_name, identifier_value):
+        pass
+
+    @abstractmethod
+    def get_sessions(self, table_name, split_by_id, identifier_column_name, identifier_value):
         pass
 
 

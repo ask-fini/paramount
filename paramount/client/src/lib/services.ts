@@ -35,7 +35,7 @@ export default class Services {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        company_uuid: identifier,
+        identifier_value: identifier,
         evaluated_rows_only: evaluatedRowsOnly,
       }),
     })
