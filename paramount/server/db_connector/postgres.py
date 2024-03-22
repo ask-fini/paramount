@@ -146,5 +146,5 @@ class PostgresDatabase(Database):
 
             # Attempt to convert any JSONB/JSON column types from the table into either list or dict
             json_cols = [col for col, dtype in table_dtypes.items() if dtype in ['JSONB', 'JSON']]
-            df.update(df[json_cols].map(try_literal_eval))
+            df.update(df[json_cols].applymap(try_literal_eval))
             return df
