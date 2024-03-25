@@ -22,7 +22,7 @@ export default function HomePage() {
       return
     }
 
-    navigator('/evaluate')
+    navigator('/overview')
   }
 
   useEffect(() => {

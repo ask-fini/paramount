@@ -38,6 +38,10 @@ export function findCommonValue(
     }
   }
 
+  if (typeof mostCommonValue !== 'string') {
+    mostCommonValue = JSON.stringify(mostCommonValue)
+  }
+
   return mostCommonValue || ''
 }
 

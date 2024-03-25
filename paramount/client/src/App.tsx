@@ -17,7 +17,7 @@ function App() {
           <Route path="/" element={<HomePage />} />
           <Route path="/evaluate" element={<EvaluatePage />} />
           <Route path="/optimize" element={<OptimizePage />} />
-          <Route path="/history" element={<HistoryPage />} />
+          <Route path="/overview" element={<HistoryPage />} />
           <Route path="*" element={<ErrorPage />} />
         </Routes>
         <Branding />

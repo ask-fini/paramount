@@ -125,6 +125,13 @@ const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
         headerName: header.split('__')[1],
         field: header,
         editable: false,
+        valueFormatter: (param) => {
+          if (param && typeof param.value !== 'string') {
+            return JSON.stringify(param.value)
+          }
+          return param.value
+        },
+        valueParser: () => null,
       }
 
       if (header === EVALUTATION_HEADER) {
