@@ -1,4 +1,8 @@
-import { ACCURATE_EVALUTATION, EVALUTATION_HEADER } from '@/lib/constants.ts'
+import {
+  ACCURATE_EVALUTATION,
+  EVALUTATION_HEADER,
+  INACCURATE_EVALUTATION,
+} from '@/lib/constants.ts'
 import { IRecord } from '@/lib/types.ts'
 import paramountConfig from '../../../../paramount.toml'
 
@@ -32,6 +36,10 @@ export function findCommonValue(
       mostCommonValue = key
       maxCount = frequency[key]
     }
+  }
+
+  if (typeof mostCommonValue !== 'string') {
+    mostCommonValue = JSON.stringify(mostCommonValue)
   }
 
   return mostCommonValue || ''
@@ -102,17 +110,14 @@ export function getHeadersFromConfig(
   header: string,
   prefix: string
 ): string[] {
-  return config[header].map((c: string) => prefix + c)
+  if (config && Object.keys(config).length) {
+    return config[header].map((c: string) => prefix + c)
+  }
+  return []
 }
 
 export function getCellEditorParams(): { values: string[] } {
   return {
-    values: [
-      ACCURATE_EVALUTATION,
-      '❔ Missing Info',
-      '❌ Irrelevant Extra Info',
-      '🕰️ Wrong/Outdated Info',
-      "📃 Didn't follow instruction",
-    ],
+    values: [ACCURATE_EVALUTATION, INACCURATE_EVALUTATION],
   }
 }

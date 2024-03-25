@@ -5,17 +5,21 @@ import DownloadIcon from '@/components/Icons/DownloadIcon'
 import { AppContext } from '@/context'
 import SaveIcon from '@/components/Icons/SaveIcon'
 import { getParamsForExport } from '@/lib/utils'
-import { IRecord } from '@/lib/types'
+import { IRecord, TParamountEvaluate } from '@/lib/types'
 import Services from '@/lib/services'
 import PageSkeleton from '@/components/PageSkeleton'
+import { ACCURATE_EVALUTATION, INACCURATE_EVALUTATION } from '@/lib/constants'
+import EvaluateReviewIndicators from '@/components/EvaluateReviewIndicators'
+import EvaluateReviewCard from '@/components/EvaluateReviewCard'
+
 import 'ag-grid-community/styles/ag-grid.css'
 import 'ag-grid-community/styles/ag-theme-quartz.css'
 
-// color: #E2E8F0
-
 export default function EvaluatePage() {
   const {
+    config,
     evaluateData,
+    setEvaluateData,
     evaluateTableHeaders,
     getEvaluateData,
     accuracy,
@@ -28,8 +32,16 @@ export default function EvaluatePage() {
   const [updatedRecords, setUpdatedRecords] = useState<Record<string, IRecord>>(
     {}
   )
+  const [reviewIndex, setReviewIndex] = useState(0)
   const [changeHappened, setChangeHappened] = useState(false)
   const [saving, setSaving] = useState(false)
+
+  const setNextAvaliableRecordToReview = () => {
+    const firstIndex = evaluateData.findIndex(
+      (data) => !data.paramount__evaluation
+    )
+    setReviewIndex(firstIndex)
+  }
 
   const onCellValueChanged = (event: CellValueChangedEvent) => {
     const foundRecord = evaluateData.find(
@@ -46,6 +58,33 @@ export default function EvaluatePage() {
 
     handleAccuracyChange()
     setChangeHappened(true)
+    setNextAvaliableRecordToReview()
+  }
+
+  const onReviewButtonClick = (type: TParamountEvaluate) => {
+    const reviewedObject = evaluateData[reviewIndex]
+    if (!reviewedObject) return
+
+    const paramountEvaluation =
+      type === 'accept' ? ACCURATE_EVALUTATION : INACCURATE_EVALUTATION
+    reviewedObject.paramount__evaluation = paramountEvaluation
+
+    setReviewIndex((prevState) => prevState + 1)
+    setUpdatedRecords((prevRecords) => ({
+      ...prevRecords,
+      [reviewedObject.paramount__recording_id]: reviewedObject,
+    }))
+
+    const updatedEvaluteData = evaluateData.map((data) => {
+      if (
+        data.paramount__recording_id === reviewedObject.paramount__recording_id
+      ) {
+        data.paramount__evaluation = paramountEvaluation
+      }
+      return data
+    })
+    setEvaluateData(updatedEvaluteData)
+    // TODO: if its the last one, don't display anything
   }
 
   const onExportClick = useCallback(() => {
@@ -71,24 +110,33 @@ export default function EvaluatePage() {
   }
 
   useEffect(() => {
-    if (!evaluateData.length) {
+    if (!evaluateData.length && Object.keys(config).length) {
       fetchEvaluateData()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [config])
 
   useEffect(() => {
     if (evaluateData.length) {
       handleAccuracyChange()
+      if (!reviewIndex) {
+        setNextAvaliableRecordToReview()
+      }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [evaluateData, handleAccuracyChange])
 
-  // To highlight rows, uncomment this and add getRowClass={getRowClass} to table
-  // const getRowClass = (params: any) => {
-  //   if (params.node.rowIndex % 2 === 0) {
-  //     return 'bg-neutral-100'
-  //   }
-  // }
+  const getRowClass = (params: any) => {
+    if (params.data.paramount__evaluation === ACCURATE_EVALUTATION) {
+      return 'bg-green-300'
+    }
+    if (params.data.paramount__evaluation === INACCURATE_EVALUTATION) {
+      return 'bg-rose-300'
+    }
+    if (params.node.rowIndex === reviewIndex) {
+      return 'bg-sky-300'
+    }
+  }
 
   return (
     <div className="ag-theme-quartz h-[90vh] w-screen py-10 p-4 md:px-28 md:pb-20">
@@ -97,8 +145,11 @@ export default function EvaluatePage() {
       ) : (
         <>
           <div className="flex justify-between items-center">
-            <h1 className="text-xl font-semibold mb-4">Evaluate Responses</h1>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-baseline mb-2">
+              <h1 className="text-xl font-semibold">Evaluate Responses</h1>
+              <EvaluateReviewIndicators />
+            </div>
+            <div className="flex items-center space-x-2 mb-2">
               <p className="mr-2 font-semibold text-xs">
                 Accuracy:{' '}
                 <span className="text-base">{accuracy.toFixed(1)}%</span>
@@ -135,7 +186,7 @@ export default function EvaluatePage() {
               </button>
             </div>
           </div>
-          <div className="w-full h-full shadow-lg rounded-xl">
+          <div className="w-full h-full max-h-[200px] shadow-lg rounded-xl">
             <AgGridReact
               ref={gridRef}
               rowData={evaluateData}
@@ -143,8 +194,15 @@ export default function EvaluatePage() {
               defaultColDef={{ editable: true, resizable: true }}
               onCellValueChanged={onCellValueChanged}
               quickFilterText={searchKey}
+              getRowClass={getRowClass}
             />
           </div>
+          <EvaluateReviewCard
+            config={config}
+            evaluateData={evaluateData}
+            reviewIndex={reviewIndex}
+            onReviewButtonClick={onReviewButtonClick}
+          />
         </>
       )}
     </div>

@@ -39,7 +39,7 @@ Health Check: `localhost:9001/health`
 
 **Client**
 
-For better development experience, make sure uncomment the `API_URL` constant inside `services.ts` and add it to every endpoint.
+For better development experience, make sure uncomment the `API_URL` constant inside `services.ts` and add it to every endpoint. With this, you can run the client separately and gain the advantage of HMR.
 
 ```py
 cd client
@@ -47,6 +47,8 @@ pnpm dev  # or make run-client
 ```
 
 #### Building the client
+
+Make sure before pushing/deploying the latest changes, run this command to get the latest build of the client.
 
 ```shell
 cd client
@@ -93,6 +95,8 @@ console.log(paramountConfig);
 ```
 
 Here is the [example toml file](https://github.com/ask-fini/paramount/blob/main/paramount/paramount.toml.example)
+
+Also, you can get the `.toml` configuration for the UI using the `/api/config` endpoint as well. Accessing these config files can be done by using the functions inside `utils.ts` depending on your case.
 
 ### Docker
 

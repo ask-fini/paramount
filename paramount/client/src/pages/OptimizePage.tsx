@@ -134,7 +134,7 @@ export default function OptimizePage() {
     setTesting(false)
 
     // Test set on optimize and infer??
-    // NOTE: for the similairty, get the records from infer results and put the selectedOutputParam
+    // NOTE: for the similarity, get the records from infer results and put the selectedOutputParam
     const { data, error } = await Services.CheckSimilarity(
       cleanTestSet,
       'output__' + selectedOutputParam

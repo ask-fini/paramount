@@ -5,10 +5,11 @@ import { Link, useLocation } from 'react-router-dom'
 export default function Navbar() {
   const { identifier } = useContext(AppContext)
   const location = useLocation()
-  const routesToDisplay = ['/evaluate', '/optimize']
+  const routesToDisplay = ['/evaluate', '/optimize', '/overview']
   const routes = [
     { id: 1, to: routesToDisplay[0], name: 'Evaluate' },
     { id: 2, to: routesToDisplay[1], name: 'Optimize' },
+    { id: 3, to: routesToDisplay[2], name: 'Overview' },
   ]
 
   if (!routesToDisplay.includes(location.pathname)) {
