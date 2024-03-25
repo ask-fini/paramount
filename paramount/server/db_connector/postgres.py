@@ -148,11 +148,16 @@ class PostgresDatabase(Database):
         return df
 
     def get_recordings(self, table_name, evaluated_rows_only, split_by_id, identifier_column_name=None,
-                       identifier_value=None):
+                       identifier_value=None, recording_ids=None):
         metadata = MetaData()
         table = Table(table_name, metadata, autoload_with=self.engine)
 
         conditions = []
+
+        if recording_ids:  # e.g., fetch only the rows by their recording ids
+            primary_key_column = table.c['paramount__recording_id']
+            condition = primary_key_column.in_(recording_ids)
+            conditions.append(condition)
 
         if split_by_id:
             identifier_column = table.c[identifier_column_name]  # Get the column to filter on

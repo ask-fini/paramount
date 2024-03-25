@@ -98,6 +98,7 @@ def latest():
         identifier_value, determined_id_colname = check_id_splitter(data)
 
         evaluated_rows_only = bool(data.get('evaluated_rows_only', False))
+        recording_ids = list(data.get('recording_ids', []))
         response_data = {"result": None, "column_order": []}
 
         # TODO: Only get non-error rows. Possible by passing "output cols that are supposed to be non-null" to read_df
@@ -106,7 +107,8 @@ def latest():
             read_df = db_instance.get_recordings(ground_truth_table_name, evaluated_rows_only=evaluated_rows_only,
                                                  split_by_id=split_by_id,
                                                  identifier_value=identifier_value,
-                                                 identifier_column_name=determined_id_colname)
+                                                 identifier_column_name=determined_id_colname,
+                                                 recording_ids=recording_ids)
             # Convert the DataFrame into a dictionary with records orientation to properly format it for JSON
             # Doing None Cleaning: Otherwise None becomes 'None' and UUID upsert fails (UUID col does not accept 'None')
             # TODO: Ideally, need for cleaning would be prevented upstream, so that 'None' never happens to begin with..
