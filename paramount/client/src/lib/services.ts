@@ -26,6 +26,7 @@ export default class Services {
 
   static async GetLatestData(
     identifier: string,
+    recordingIds: string[],
     evaluatedRowsOnly?: boolean
   ): Promise<TResult<ILatestDataResult, Error>> {
     const response = await fetch(`/api/latest`, {
@@ -35,6 +36,7 @@ export default class Services {
       },
       body: JSON.stringify({
         identifier_value: identifier,
+        recording_ids: recordingIds || [],
         evaluated_rows_only: evaluatedRowsOnly,
       }),
     })
@@ -52,7 +54,11 @@ export default class Services {
   }
 
   static async SaveSession(
-    data: any
+    updatedRecords: IRecord[],
+    sessionAccuracy: number, // It's float on server side, should be between 0 & 1
+    sessionName: string,
+    recordedIds: string[],
+    identifier: string
   ): Promise<TResult<ILatestDataResult, Error>> {
     const response = await fetch(`/api/submit_evaluations`, {
       method: 'POST',
@@ -60,13 +66,42 @@ export default class Services {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        updated_records: data,
+        updated_records: updatedRecords,
+        session_accuracy: sessionAccuracy,
+        session_name: sessionName,
+        recorded_ids: recordedIds,
+        identifier_value: identifier,
       }),
     })
 
     if (response.ok) {
       const res = await response.json()
       console.log('SAVED SESSION', res)
+      return {
+        data: res,
+        error: null,
+      }
+    }
+
+    return { error: new Error(''), data: null }
+  }
+
+  static async GetSessions(
+    identifierValue: string
+  ): Promise<TResult<any[], Error>> {
+    const response = await fetch(`/api/get_sessions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        identifier_value: identifierValue,
+      }),
+    })
+
+    if (response.ok) {
+      const res = await response.json()
+      console.log('GET SESSIONS', res)
       return {
         data: res,
         error: null,

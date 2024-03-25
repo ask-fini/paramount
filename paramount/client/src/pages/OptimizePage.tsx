@@ -14,7 +14,7 @@ import 'ag-grid-community/styles/ag-theme-quartz.css'
 import { IRecord } from '@/lib/types'
 import Services from '@/lib/services'
 import { ColDef } from 'ag-grid-community'
-import { COSINE_SIMILARITY } from '@/lib/constants'
+import { COSINE_SIMILARITY, OUTPUT_PREFIX } from '@/lib/constants'
 
 export default function OptimizePage() {
   const {
@@ -85,7 +85,7 @@ export default function OptimizePage() {
     const sessionOutputColumns = getHeadersFromConfig(
       config,
       'output_cols',
-      'output__'
+      OUTPUT_PREFIX
     )
     const colsToDisplay = [
       ...sessionOutputColumns,
@@ -133,7 +133,6 @@ export default function OptimizePage() {
 
     setTesting(false)
 
-    // Test set on optimize and infer??
     // NOTE: for the similarity, get the records from infer results and put the selectedOutputParam
     const { data, error } = await Services.CheckSimilarity(
       cleanTestSet,

@@ -31,6 +31,8 @@ export interface IAppState {
   paramountOutputColumns: string[]
   setParamountOutputColumns: (val: string[]) => void
   findParamountColumnHeader: (val: string) => string | null
+  historyLookupForEvaluate: string[]
+  setHistoryLookupForEvaluate: (val: string[]) => void
 }
 
 export interface ILatestDataResult {
@@ -63,6 +65,15 @@ export interface IRecord extends IParamountRecordFields {
   output__1_misc_data: IRecordMiscData
   output__2: number
   cosine_similarity?: number
+}
+
+export interface IParamountSession {
+  paramount__session_accuracy: number
+  paramount__session_id: string
+  paramount__session_name: string
+  paramount__session_recorded_ids: string[]
+  paramount__session_splitter_id: string
+  paramount__session_timestamp: string
 }
 
 export interface IChatList {

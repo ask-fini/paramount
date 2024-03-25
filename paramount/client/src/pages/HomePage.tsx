@@ -7,6 +7,7 @@ import ArrowRightIcon from '../components/Icons/ArrowRightIcon.tsx'
 export default function HomePage() {
   const { identifier, setIdentifier, loading, getEvaluateData } =
     useContext(AppContext)
+
   const navigator = useNavigate()
   const [searchParams] = useSearchParams()
   const [error, setError] = useState<string>('')

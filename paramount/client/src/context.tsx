@@ -31,6 +31,11 @@ const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
   const [evaluateTableHeaders, setEvaluateTableHeaders] = useState<ColDef[]>([])
   const [optimizeData, setOptimizeData] = useState<IRecord[]>([])
   const [optimizeTableHeaders, setOptimizeTableHeaders] = useState<ColDef[]>([])
+  // Clicking a history will set this and this will be passed to fetching
+  // evaluate data in order to get only selected history
+  const [historyLookupForEvaluate, setHistoryLookupForEvaluate] = useState<
+    string[]
+  >([])
 
   useEffect(() => {
     const foundIdentifier = localStorage.getItem('identifier')
@@ -39,6 +44,16 @@ const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
     }
     getConfig()
   }, [])
+
+  // Whenever someone clicks a session from Overview Page, we fill the
+  // historyLookupForEvaluate array and refetch the Evalaute Data
+  useEffect(() => {
+    if (historyLookupForEvaluate.length) {
+      getEvaluateData(identifier)
+      setHistoryLookupForEvaluate([])
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historyLookupForEvaluate])
 
   const getConfig = async () => {
     const { data, error } = await Services.GetConfig()
@@ -50,7 +65,12 @@ const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
     identifier: string
   ): Promise<TResult<any, Error>> => {
     setLoading(true)
-    const { data, error } = await Services.GetLatestData(identifier)
+    const recordingIds = historyLookupForEvaluate || []
+    const { data, error } = await Services.GetLatestData(
+      identifier,
+      recordingIds,
+      false
+    )
     if (error) {
       setLoading(false)
       return { data: null, error }
@@ -102,7 +122,7 @@ const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
     identifier: string
   ): Promise<TResult<any, Error>> => {
     setLoading(true)
-    const { data, error } = await Services.GetLatestData(identifier, true)
+    const { data, error } = await Services.GetLatestData(identifier, [], true)
     if (error) {
       setLoading(false)
       return { data: null, error }
@@ -195,6 +215,8 @@ const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
         paramountOutputColumns,
         setParamountOutputColumns,
         findParamountColumnHeader,
+        historyLookupForEvaluate,
+        setHistoryLookupForEvaluate,
       }}
     >
       {children}

@@ -17,9 +17,10 @@ import 'ag-grid-community/styles/ag-theme-quartz.css'
 
 export default function EvaluatePage() {
   const {
+    identifier,
     config,
     evaluateData,
-    setEvaluateData,
+
     evaluateTableHeaders,
     getEvaluateData,
     accuracy,
@@ -75,15 +76,8 @@ export default function EvaluatePage() {
       [reviewedObject.paramount__recording_id]: reviewedObject,
     }))
 
-    const updatedEvaluteData = evaluateData.map((data) => {
-      if (
-        data.paramount__recording_id === reviewedObject.paramount__recording_id
-      ) {
-        data.paramount__evaluation = paramountEvaluation
-      }
-      return data
-    })
-    setEvaluateData(updatedEvaluteData)
+    setChangeHappened(true)
+    handleAccuracyChange()
     // TODO: if its the last one, don't display anything
   }
 
@@ -94,8 +88,17 @@ export default function EvaluatePage() {
 
   const onSaveSession = async () => {
     setSaving(true)
-    const payload = Object.values(updatedRecords)
-    const { error } = await Services.SaveSession(payload)
+    const records = Object.values(updatedRecords)
+    const sessionAccuracy = accuracy / 100
+    const sessionName = Date.now().toString()
+    const recordedIds = evaluateData.map((d) => d.paramount__recording_id)
+    const { error } = await Services.SaveSession(
+      records,
+      sessionAccuracy,
+      sessionName,
+      recordedIds,
+      identifier
+    )
     if (error) {
       console.log('save session error: ', error)
     }

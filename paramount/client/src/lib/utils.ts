@@ -2,6 +2,9 @@ import {
   ACCURATE_EVALUTATION,
   EVALUTATION_HEADER,
   INACCURATE_EVALUTATION,
+  INPUT_PREFIX,
+  OUTPUT_PREFIX,
+  PARAMOUNT_PREFIX,
 } from '@/lib/constants.ts'
 import { IRecord } from '@/lib/types.ts'
 import paramountConfig from '../../../../paramount.toml'
@@ -48,15 +51,15 @@ export function findCommonValue(
 export function getEvaluateTableHeaders(): string[] {
   return [
     EVALUTATION_HEADER,
-    ...getHeadersWithPrefix('VITE_META_COLS', 'paramount__'),
-    ...getHeadersWithPrefix('VITE_INPUT_COLS', 'input_'),
-    ...getHeadersWithPrefix('VITE_OUTPUT_COLS', 'output__'),
+    ...getHeadersWithPrefix('VITE_META_COLS', PARAMOUNT_PREFIX),
+    ...getHeadersWithPrefix('VITE_INPUT_COLS', INPUT_PREFIX),
+    ...getHeadersWithPrefix('VITE_OUTPUT_COLS', OUTPUT_PREFIX),
   ]
 }
 
 export function getEditableTableHeaders(): string[] {
   return [
-    ...getHeadersWithPrefix('VITE_OUTPUT_COLS', 'output__'),
+    ...getHeadersWithPrefix('VITE_OUTPUT_COLS', OUTPUT_PREFIX),
     EVALUTATION_HEADER,
   ]
 }
@@ -70,14 +73,17 @@ export function getHeadersWithPrefix(header: any, prefix: string): string[] {
 export function getEvaluateTableHeadersFromToml(): string[] {
   return [
     EVALUTATION_HEADER,
-    ...getHeadersFromToml('meta_cols', 'paramount__'),
-    ...getHeadersFromToml('input_cols', 'input_'),
-    ...getHeadersFromToml('output_cols', 'output__'),
+    ...getHeadersFromToml('meta_cols', PARAMOUNT_PREFIX),
+    ...getHeadersFromToml('input_cols', INPUT_PREFIX),
+    ...getHeadersFromToml('output_cols', OUTPUT_PREFIX),
   ]
 }
 
 export function getEditableTableHeadersFromToml(): string[] {
-  return [...getHeadersFromToml('output_cols', 'output__'), EVALUTATION_HEADER]
+  return [
+    ...getHeadersFromToml('output_cols', OUTPUT_PREFIX),
+    EVALUTATION_HEADER,
+  ]
 }
 
 export function getHeadersFromToml(header: string, prefix: string): string[] {
@@ -90,9 +96,9 @@ export function getEvaluateTableHeadersFromConfig(
 ): string[] {
   return [
     EVALUTATION_HEADER,
-    ...getHeadersFromConfig(config, 'meta_cols', 'paramount__'),
-    ...getHeadersFromConfig(config, 'input_cols', 'input_'),
-    ...getHeadersFromConfig(config, 'output_cols', 'output__'),
+    ...getHeadersFromConfig(config, 'meta_cols', PARAMOUNT_PREFIX),
+    ...getHeadersFromConfig(config, 'input_cols', INPUT_PREFIX),
+    ...getHeadersFromConfig(config, 'output_cols', OUTPUT_PREFIX),
   ]
 }
 
@@ -100,7 +106,7 @@ export function getEditableTableHeadersFromConfig(
   config: Record<string, string[]>
 ): string[] {
   return [
-    ...getHeadersFromConfig(config, 'output_cols', 'output__'),
+    ...getHeadersFromConfig(config, 'output_cols', OUTPUT_PREFIX),
     EVALUTATION_HEADER,
   ]
 }
@@ -120,4 +126,18 @@ export function getCellEditorParams(): { values: string[] } {
   return {
     values: [ACCURATE_EVALUTATION, INACCURATE_EVALUTATION],
   }
+}
+
+export function timestampConverter(timestamp: number | string): string {
+  const date = new Date(Number(timestamp))
+  const formattedDate = date.toLocaleDateString('en-US', {
+    // weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+    second: 'numeric',
+  })
+  return formattedDate
 }
