@@ -28,7 +28,6 @@ export default class Services {
     identifier: string,
     evaluatedRowsOnly?: boolean
   ): Promise<TResult<ILatestDataResult, Error>> {
-    // TODO: what to do with env vars? need VITE prefix
     const response = await fetch(`/api/latest`, {
       method: 'POST',
       headers: {
@@ -55,7 +54,6 @@ export default class Services {
   static async SaveSession(
     data: any
   ): Promise<TResult<ILatestDataResult, Error>> {
-    // TODO: what to do with env vars? need VITE prefix
     const response = await fetch(`/api/submit_evaluations`, {
       method: 'POST',
       headers: {

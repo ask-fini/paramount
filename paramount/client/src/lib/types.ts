@@ -2,12 +2,13 @@ import { ColDef } from 'ag-grid-community'
 
 //
 export type TResult<T, K> = Success<T> | Failure<K>
+export type TParamountEvaluate = 'accept' | 'reject'
 
 export interface IAppState {
   identifier: string
   setIdentifier: (val: string) => void
-  config: Record<string, string[]>
-  setConfig: (val: Record<string, string[]>) => void
+  config: Record<string, any>
+  setConfig: (val: Record<string, any>) => void
   loading: boolean
   setLoading: (val: boolean) => void
   evaluateData: IRecord[]
@@ -58,10 +59,15 @@ export interface IRecord extends IParamountRecordFields {
   output__1_categories: any
   output__1_error: any
   output__1_function_call: IFunctionCall
-  output__1_messages: string
+  output__1_messages: IChatList[]
   output__1_misc_data: IRecordMiscData
   output__2: number
   cosine_similarity?: number
+}
+
+export interface IChatList {
+  role: string
+  content: string
 }
 
 interface IParamountRecordFields {

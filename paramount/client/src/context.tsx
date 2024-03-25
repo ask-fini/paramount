@@ -15,7 +15,7 @@ const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [identifier, setIdentifier] = useState('')
-  const [config, setConfig] = useState<Record<string, string[]>>({})
+  const [config, setConfig] = useState<Record<string, any>>({})
   const [loading, setLoading] = useState<boolean>(false)
   const [accuracy, setAccuracy] = useState<number>(0)
   // Original, untouched columns
@@ -66,7 +66,14 @@ const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
         sortable: true,
         filter: true,
         editable: isEditable,
-        cellStyle: isEditable ? {} : { backgroundColor: '#2244CC44' },
+        valueFormatter: (param) => {
+          if (param && typeof param.value !== 'string') {
+            return JSON.stringify(param.value)
+          }
+          return param.value
+        },
+        valueParser: () => null,
+        // cellStyle: isEditable ? {} : { backgroundColor: '#2244CC44' },
       }
 
       if (header === EVALUTATION_HEADER) {
