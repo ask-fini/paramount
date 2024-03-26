@@ -7,11 +7,8 @@ from time import time
 import uuid
 import traceback
 from flask import request, jsonify
-from .db_connector import db
-from dotenv import load_dotenv, find_dotenv
-import os
-if find_dotenv():
-    load_dotenv()
+from paramount.server.db_connector import db
+from paramount.server.library_functions import load_config
 import threading
 
 
@@ -50,8 +47,19 @@ def serialize_response(response):
 
 
 def record(flask_app):
-    db_instance = db.get_database()
-    is_live = os.getenv('PARAMOUNT_IS_LIVE') == "TRUE"
+    config = load_config()
+
+    db_type = config['db']['type']
+
+    connection_string = ""
+    if db_type in config['db']:
+        db_config = config['db'].get(db_type)
+        if db_config and 'connection_string' in db_config:
+            connection_string = db_config['connection_string']
+
+    db_instance = db.get_database(db_type, connection_string)
+
+    is_live = config['record']['enabled']
     print(f"Paramount enabled: {is_live}")
 
     def decorator(func):

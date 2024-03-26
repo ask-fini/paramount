@@ -1,15 +1,8 @@
 import streamlit as st
 import pandas as pd
-from paramount.server.db_connector import db
 import uuid
 import toml
 import os
-
-
-@st.cache_resource
-def db_connection():
-    db_instance = db.get_database()
-    return db_instance
 
 
 def large_centered_button(text, on_click=None, args=None):
