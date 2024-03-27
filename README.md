@@ -48,7 +48,7 @@ pnpm dev  # or make run-client
 
 #### Building the client
 
-Make sure before pushing/deploying the latest changes, run this command to get the latest build of the client.
+Make sure before pushing/deploying the latest changes, run this command to get the latest build of the client. Also, after build command, don't forget the add the `__init__.py` file to both `dist` & `dist/assets` folders.
 
 ```shell
 cd client
