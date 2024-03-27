@@ -85,6 +85,7 @@ const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({
         field: header,
         sortable: true,
         filter: true,
+        flex: 1,
         editable: isEditable,
         valueFormatter: (param) => {
           if (param && typeof param.value !== 'string') {
