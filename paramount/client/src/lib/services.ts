@@ -44,6 +44,8 @@ export default class Services {
     if (response.ok) {
       const res = await response.json()
       console.log('Latest Data: ', res)
+      // To protect against someone pasting a random UUID and seeing internal datastructures
+      if (res.result.length === 0) return { error: new Error('No data found'), data: null }
       return {
         data: { data: res.result, columnOrder: res.column_order },
         error: null,
