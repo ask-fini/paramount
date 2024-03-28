@@ -23,5 +23,5 @@ setup(
    },
    packages=find_packages(),
    include_package_data=True,
-   install_requires=['pandas', 'pytz', 'flask', 'python-dotenv', 'scikit-learn', 'sqlalchemy', 'psycopg2-binary', 'gunicorn', 'toml']
+   install_requires=['requests', 'pandas', 'pytz', 'flask', 'python-dotenv', 'scikit-learn', 'sqlalchemy', 'psycopg2-binary', 'gunicorn', 'toml']
 )
