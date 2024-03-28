@@ -204,8 +204,6 @@ def infer():
 
         result = invoke_via_functions_api(base_url=base_url, func_name=row['paramount__function_name'],
                                           args=args, kwargs=kwargs)
-        
-        print(2222, result)
 
         for output_col in session_output_cols:
             output_index, _, data_item = get_result_from_colname(result, output_col)
